@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>JSBridge Scanner v3</title>
+<style>
+:root {
+  --bg: #0f0f23; --card: #1a1a2e; --card-hover: #16213e;
+  --text: #eee; --text-dim: #888;
+  --blue: #00d4ff; --red: #ff4757; --yellow: #ffa502; --green: #2ed573;
+  --purple: #a855f7; --pink: #ec4899; --orange: #ff7f50;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; font-size: 16px; }
+.container { max-width: 800px; margin: 0 auto; padding: 20px; }
+
+.header { text-align: center; padding: 30px 0 20px; }
+.header h1 { margin: 0; font-size: 28px; color: var(--blue); font-weight: 700; }
+.header p { color: var(--text-dim); font-size: 14px; margin-top: 8px; }
+
+/* 统计卡片 */
+.stats { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+.stat-box { flex: 1; min-width: 70px; background: var(--card); padding: 12px 8px; border-radius: 12px; text-align: center; }
+.stat-box .count { font-size: 26px; font-weight: bold; display: block; }
+.stat-box .label { font-size: 11px; color: var(--text-dim); }
+.stat-box.high .count { color: var(--red); }
+.stat-box.medium .count { color: var(--yellow); }
+.stat-box.safe .count { color: var(--green); }
+.stat-box.total .count { color: var(--blue); }
+
+/* 筛选和搜索 */
+.filter-bar { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+.filter-btn { flex: 1; min-width: 60px; padding: 10px 6px; border: none; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 600; }
+.filter-btn.all { background: var(--blue); color: #000; }
+.filter-btn.high { background: var(--red); color: #fff; }
+.filter-btn.medium { background: var(--yellow); color: #000; }
+.filter-btn.safe { background: var(--green); color: #000; }
+.search-box { margin-bottom: 15px; }
+.search-input { width: 100%; padding: 12px 14px; border: 2px solid var(--card); border-radius: 10px; background: var(--card); color: var(--text); font-size: 15px; outline: none; }
+.search-input:focus { border-color: var(--blue); }
+
+/* 工具栏 */
+.toolbar { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.tool-btn { padding: 10px 14px; border: none; border-radius: 8px; background: var(--card); color: var(--text); font-size: 13px; cursor: pointer; }
+
+/* 结果列表 */
+.results { margin-bottom: 30px; }
+.item { background: var(--card); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+.item-header { padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.item-header:active { background: var(--card-hover); }
+.item-left { flex: 1; min-width: 0; }
+.item-name { font-weight: 600; font-size: 15px; word-break: break-all; }
+.item-type { color: var(--text-dim); font-size: 11px; background: var(--bg); padding: 2px 6px; border-radius: 4px; margin-left: 6px; }
+.item-right { display: flex; align-items: center; gap: 8px; margin-left: 10px; flex-shrink: 0; }
+.risk-tag { padding: 5px 10px; border-radius: 14px; font-size: 11px; font-weight: bold; }
+.risk-tag.high { background: var(--red); color: #fff; }
+.risk-tag.medium { background: var(--yellow); color: #000; }
+.risk-tag.safe { background: var(--green); color: #000; }
+.arrow { font-size: 12px; color: var(--text-dim); }
+
+.item-body { display: none; padding: 0 14px 14px; border-top: 1px solid var(--card-hover); }
+.item.expanded .item-body { display: block; }
+
+/* 风险说明 - 重点改进 */
+.risk-detail { background: var(--card-hover); padding: 14px; border-radius: 8px; margin-top: 12px; }
+.risk-detail-title { font-size: 14px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.risk-detail.high .risk-detail-title { color: var(--red); }
+.risk-detail.medium .risk-detail-title { color: var(--yellow); }
+.risk-detail.safe .risk-detail-title { color: var(--green); }
+
+.matched-keywords { margin-bottom: 10px; }
+.keyword-tag { display: inline-block; padding: 4px 10px; margin: 2px; border-radius: 6px; font-size: 12px; font-weight: 600; }
+.keyword-tag.high { background: rgba(255,71,87,0.2); color: var(--red); border: 1px solid var(--red); }
+.keyword-tag.medium { background: rgba(255,165,2,0.2); color: var(--yellow); border: 1px solid var(--yellow); }
+
+.attack-scenarios { font-size: 13px; line-height: 1.7; }
+.attack-scenarios ul { margin: 8px 0 0 0; padding-left: 18px; }
+.attack-scenarios li { margin-bottom: 6px; }
+.attack-scenarios strong { color: var(--text); }
+
+/* 接口调用面板 - 重点改进 */
+.call-panel { margin-top: 12px; background: var(--bg); border-radius: 8px; padding: 14px; }
+.call-title { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--blue); }
+.call-section { margin-bottom: 14px; }
+.call-section:last-child { margin-bottom: 0; }
+.call-label { font-size: 12px; color: var(--text-dim); margin-bottom: 6px; }
+
+/* 方法列表 */
+.method-list { max-height: 200px; overflow-y: auto; }
+.method-item { display: flex; align-items: center; gap: 8px; padding: 8px; background: var(--card); border-radius: 6px; margin-bottom: 6px; }
+.method-item:last-child { margin-bottom: 0; }
+.method-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--purple); color: #fff; }
+.method-type.function { background: var(--blue); color: #000; }
+.method-name { flex: 1; font-family: monospace; font-size: 13px; }
+.method-btn { padding: 6px 10px; border: none; border-radius: 4px; font-size: 11px; cursor: pointer; background: var(--blue); color: #000; }
+.method-btn.copy { background: var(--purple); color: #fff; }
+
+/* 调用输入 */
+.call-input-group { display: flex; gap: 8px; margin-bottom: 8px; }
+.call-input { flex: 1; padding: 10px; border: 1px solid var(--card); border-radius: 6px; background: var(--card); color: var(--text); font-size: 13px; font-family: monospace; }
+.call-btn { padding: 10px 16px; border: none; border-radius: 6px; background: var(--blue); color: #000; font-weight: 600; cursor: pointer; }
+.call-btn:active { opacity: 0.8; }
+
+/* 调用结果 */
+.call-result { margin-top: 10px; padding: 10px; border-radius: 6px; font-size: 12px; font-family: monospace; white-space: pre-wrap; word-break: break-all; max-height: 250px; overflow: auto; }
+.call-result.success { background: rgba(46,213,115,0.1); border-left: 3px solid var(--green); }
+.call-result.error { background: rgba(255,71,87,0.1); border-left: 3px solid var(--red); }
+.call-result.info { background: rgba(0,212,255,0.1); border-left: 3px solid var(--blue); }
+
+/* 快捷调用按钮 */
+.quick-call { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.quick-btn { padding: 6px 10px; border: none; border-radius: 4px; background: var(--card); color: var(--text); font-size: 11px; cursor: pointer; }
+.quick-btn:active { background: var(--card-hover); }
+
+/* Toast */
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--card); color: var(--text); padding: 12px 24px; border-radius: 20px; font-size: 14px; z-index: 2000; opacity: 0; transition: opacity 0.3s; max-width: 90%; text-align: center; }
+.toast.show { opacity: 1; }
+
+/* Modal */
+.modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+.modal.show { display: flex; }
+.modal-content { background: var(--card); border-radius: 16px; padding: 20px; max-width: 600px; width: 100%; max-height: 85vh; overflow: auto; }
+.modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+.modal-body { font-size: 12px; font-family: monospace; background: var(--bg); padding: 12px; border-radius: 8px; white-space: pre-wrap; word-break: break-all; max-height: 500px; overflow: auto; }
+.modal-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+.modal-btn.primary { background: var(--blue); color: #000; }
+.modal-btn.secondary { background: var(--card-hover); color: var(--text); }
+
+/* 存储面板 */
+.storage-panel { background: var(--card); border-radius: 12px; padding: 14px; margin-bottom: 20px; }
+.storage-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--blue); }
+.storage-item { padding: 8px 10px; background: var(--bg); border-radius: 6px; margin-bottom: 8px; }
+.storage-item:last-child { margin-bottom: 0; }
+.storage-label { font-size: 11px; color: var(--text-dim); }
+.storage-value { font-size: 12px; word-break: break-all; font-family: monospace; margin-top: 4px; }
+
+.empty { text-align: center; color: var(--text-dim); padding: 40px 20px; }
+
+@media (max-width: 480px) {
+  .container { padding: 16px; }
+  .header h1 { font-size: 24px; }
+  .item-header { padding: 12px; }
+  .item-name { font-size: 14px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>JSBridge Scanner v3</h1>
+    <p>检测 WebView 中注入的 JS-Native 接口</p>
+  </div>
+
+  <!-- 存储信息 -->
+  <div class="storage-panel">
+    <div class="storage-title">存储信息</div>
+    <div class="storage-item">
+      <div class="storage-label">Cookie</div>
+      <div class="storage-value" id="cookie-value">检测中...</div>
+    </div>
+    <div class="storage-item">
+      <div class="storage-label">LocalStorage</div>
+      <div class="storage-value" id="localstorage-value">检测中...</div>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat-box total"><span class="count" id="total">0</span><span class="label">总计</span></div>
+    <div class="stat-box high"><span class="count" id="high">0</span><span class="label">高风险</span></div>
+    <div class="stat-box medium"><span class="count" id="medium">0</span><span class="label">中风险</span></div>
+    <div class="stat-box safe"><span class="count" id="safe">0</span><span class="label">安全</span></div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-btn all" onclick="render('all')">全部</button>
+    <button class="filter-btn high" onclick="render('high')">高风险</button>
+    <button class="filter-btn medium" onclick="render('medium')">中风险</button>
+    <button class="filter-btn safe" onclick="render('safe')">安全</button>
+  </div>
+
+  <div class="search-box">
+    <input type="text" class="search-input" id="search" placeholder="搜索接口或方法名称..." oninput="applyFilter()">
+  </div>
+
+  <div class="toolbar">
+    <button class="tool-btn" onclick="exportJSON()">导出JSON</button>
+    <button class="tool-btn" onclick="exportReport()">导出报告</button>
+    <button class="tool-btn" onclick="location.reload()">重新扫描</button>
+  </div>
+
+  <div class="results" id="results"></div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-content">
+    <div class="modal-title" id="modal-title">导出结果</div>
+    <div class="modal-body" id="modal-body"></div>
+    <button class="modal-btn primary" onclick="copyModal()">复制内容</button>
+    <button class="modal-btn secondary" onclick="closeModal()">关闭</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+  // ===================== 风险定义 - 详细攻击场景 =====================
+  const RISK_DEFINITIONS = {
+    high: {
+      keywords: {
+        "install": { name: "安装功能", attacks: ["远程静默安装恶意APK", "诱导用户安装木马应用", "绕过应用商店安全检测"] },
+        "apk": { name: "APK操作", attacks: ["下载并安装恶意应用", "替换正常应用为恶意版本", "获取应用安装列表"] },
+        "download": { name: "下载功能", attacks: ["下载恶意程序到设备", "绕过浏览器下载警告", "后台静默下载文件"] },
+        "exec": { name: "代码执行", attacks: ["执行任意系统命令", "运行恶意脚本代码", "提权执行敏感操作"] },
+        "shell": { name: "Shell执行", attacks: ["获取root shell权限", "执行系统级命令", "修改系统配置文件"] },
+        "cmd": { name: "命令执行", attacks: ["执行任意命令行指令", "调用系统二进制文件", "链式命令注入攻击"] },
+        "delete": { name: "删除功能", attacks: ["删除用户重要文件", "清除应用数据", "破坏系统文件"] },
+        "remove": { name: "移除功能", attacks: ["卸载安全软件", "移除系统应用", "删除用户数据"] },
+        "format": { name: "格式化", attacks: ["格式化存储设备", "清空用户数据分区", "恢复出厂设置"] },
+        "sendsms": { name: "发送短信", attacks: ["发送扣费短信", "窃取验证码", "群发垃圾短信"] },
+        "sms": { name: "短信操作", attacks: ["读取短信验证码", "发送恶意短信", "拦截银行验证码"] },
+        "call": { name: "拨打电话", attacks: ["拨打付费声讯台", "消耗用户话费", "伪造来电显示"] },
+        "dial": { name: "拨号功能", attacks: ["后台拨打付费号码", "绕过用户确认拨号", "拨打国际长途扣费"] },
+        "phone": { name: "电话功能", attacks: ["获取通话记录", "监听用户通话", "拨打骚扰电话"] },
+        "pay": { name: "支付功能", attacks: ["发起未授权支付", "窃取支付凭证", "修改支付金额"] },
+        "payment": { name: "支付操作", attacks: ["调用支付宝/微信支付", "绕过密码验证", "伪造支付成功"] },
+        "alipay": { name: "支付宝", attacks: ["调用支付宝支付接口", "窃取支付宝token", "发起支付宝转账"] },
+        "wechatpay": { name: "微信支付", attacks: ["调用微信支付接口", "窃取支付session", "发起微信支付"] },
+        "login": { name: "登录功能", attacks: ["窃取用户账号密码", "获取登录token", "劫持登录会话"] },
+        "logout": { name: "登出功能", attacks: ["强制用户下线", "清除登录状态", "触发重新登录窃取凭证"] },
+        "register": { name: "注册功能", attacks: ["收集用户注册信息", "批量注册账号", "关联手机号信息"] },
+        "signin": { name: "登录", attacks: ["窃取登录凭证", "记录用户输入", "劫持登录请求"] },
+        "signup": { name: "注册", attacks: ["获取用户手机号", "收集个人身份信息", "批量创建账号"] },
+        "eval": { name: "代码执行", attacks: ["执行任意JS代码", "注入恶意脚本", "XSS攻击利用点"] }
+      }
+    },
+    medium: {
+      keywords: {
+        "open": { name: "打开功能", attacks: ["打开恶意链接", "调起钓鱼页面", "绕过安全检测跳转"] },
+        "start": { name: "启动功能", attacks: ["启动后台服务", "调起恶意应用", "启动隐藏Activity"] },
+        "launch": { name: "启动应用", attacks: ["启动指定应用", "绕过权限检查启动", "调起支付应用"] },
+        "intent": { name: "Intent操作", attacks: ["构造恶意Intent", "启动任意Activity", "发送系统广播"] },
+        "activity": { name: "Activity操作", attacks: ["启动任意界面", "绕过登录界面", "提权Activity"] },
+        "package": { name: "包管理", attacks: ["获取已安装应用列表", "检测安全软件", "查找攻击目标应用"] },
+        "device": { name: "设备信息", attacks: ["获取设备唯一标识", "追踪用户设备", "关联用户身份"] },
+        "imei": { name: "IMEI获取", attacks: ["获取设备IMEI", "追踪用户设备", "生成设备指纹"] },
+        "imsi": { name: "IMSI获取", attacks: ["获取SIM卡标识", "追踪用户身份", "关联多设备"] },
+        "mac": { name: "MAC地址", attacks: ["获取网络标识", "追踪设备位置", "绕过匿名保护"] },
+        "serial": { name: "序列号", attacks: ["获取设备序列号", "唯一标识设备", "关联用户信息"] },
+        "androidid": { name: "Android ID", attacks: ["获取Android ID", "追踪用户", "广告追踪"] },
+        "idfa": { name: "IDFA", attacks: ["获取iOS广告标识", "追踪用户行为", "广告投放追踪"] },
+        "location": { name: "位置信息", attacks: ["获取用户精确位置", "追踪用户行踪", "位置关联攻击"] },
+        "gps": { name: "GPS定位", attacks: ["获取GPS坐标", "实时追踪位置", "位置历史记录"] },
+        "contact": { name: "联系人", attacks: ["读取通讯录", "收集联系人信息", "社交关系分析"] },
+        "addressbook": { name: "通讯录", attacks: ["读取全部联系人", "上传联系人数据", "社交图谱构建"] },
+        "camera": { name: "摄像头", attacks: ["静默拍照", "后台录像", "偷拍隐私照片"] },
+        "photo": { name: "相册", attacks: ["读取相册照片", "上传隐私图片", "窃取证件照"] },
+        "video": { name: "视频", attacks: ["录制视频", "读取视频文件", "后台偷拍"] },
+        "audio": { name: "音频", attacks: ["后台录音", "窃取语音记录", "监听环境音"] },
+        "record": { name: "录音", attacks: ["静默录音", "录制通话", "环境音监听"] },
+        "microphone": { name: "麦克风", attacks: ["开启麦克风", "远程监听", "窃取语音验证码"] },
+        "file": { name: "文件操作", attacks: ["读取敏感文件", "写入恶意文件", "遍历文件系统"] },
+        "readfile": { name: "读取文件", attacks: ["读取隐私文件", "获取配置信息", "窃取数据库"] },
+        "writefile": { name: "写入文件", attacks: ["写入恶意代码", "修改配置文件", "植入后门"] },
+        "clipboard": { name: "剪贴板", attacks: ["读取剪贴板密码", "窃取复制内容", "获取验证码"] },
+        "notification": { name: "通知", attacks: ["发送伪造通知", "钓鱼通知攻击", "绕过通知权限"] },
+        "wifi": { name: "WiFi", attacks: ["获取WiFi信息", "连接恶意热点", "窃取WiFi密码"] },
+        "bluetooth": { name: "蓝牙", attacks: ["获取蓝牙设备列表", "追踪蓝牙设备", "蓝牙漏洞利用"] },
+        "nfc": { name: "NFC", attacks: ["读取NFC卡片", "窃取门禁卡信息", "伪造NFC标签"] },
+        "webview": { name: "WebView", attacks: ["加载恶意页面", "注入JS代码", "绕过安全策略"] },
+        "storage": { name: "存储", attacks: ["访问应用数据", "读取敏感文件", "修改存储内容"] },
+        "database": { name: "数据库", attacks: ["读取应用数据库", "获取账号数据", "修改数据记录"] },
+        "fingerprint": { name: "指纹", attacks: ["获取指纹信息", "绕过生物认证", "伪造指纹验证"] },
+        "faceid": { name: "面容ID", attacks: ["触发面容验证", "绕过面容认证", "窃取面部数据"] }
+      }
+    },
+    safe: {
+      keywords: {}
+    }
+  };
+
+  // ===================== 白名单 =====================
+  const WHITELIST = [
+    "postMessage","blur","focus","close","parent","opener","top","length","frames","closed",
+    "location","self","window","document","name","customElements","history","locationbar",
+    "menubar","personalbar","scrollbars","statusbar","toolbar","status","frameElement",
+    "navigator","origin","external","screen","innerWidth","innerHeight","scrollX",
+    "pageXOffset","scrollY","pageYOffset","visualViewport","screenX","screenY","outerWidth",
+    "outerHeight","devicePixelRatio","clientInformation","screenLeft","screenTop",
+    "defaultStatus","defaultstatus","styleMedia","isSecureContext","performance","stop",
+    "open","alert","confirm","prompt","print","queueMicrotask","requestAnimationFrame",
+    "cancelAnimationFrame","captureEvents","releaseEvents","requestIdleCallback",
+    "cancelIdleCallback","getComputedStyle","matchMedia","moveTo","moveBy","resizeTo",
+    "resizeBy","scroll","scrollTo","scrollBy","getSelection","find",
+    "webkitRequestAnimationFrame","webkitCancelAnimationFrame","fetch","btoa","atob",
+    "setTimeout","clearTimeout","setInterval","clearInterval","createImageBitmap",
+    "onappinstalled","onbeforeinstallprompt","crypto","ondevicemotion","ondeviceorientation",
+    "ondeviceorientationabsolute","indexedDB","webkitStorageInfo","sessionStorage",
+    "localStorage","orientation","onorientationchange","openDatabase","chrome",
+    "ontouchcancel","ontouchend","ontouchmove","ontouchstart","speechSynthesis",
+    "webkitRequestFileSystem","webkitResolveLocalFileSystemURL",
+    "addEventListener","removeEventListener","dispatchEvent",
+    "JSON","Promise","Proxy","Reflect","Map","Set","WeakMap","WeakSet",
+    "Object","Function","Array","String","Number","Boolean","Symbol","BigInt","Math","Date",
+    "RegExp","Error","TypeError","SyntaxError","ReferenceError","RangeError","URIError",
+    "URL","URLSearchParams","Blob","File","FileReader","FileList","FormData","Headers",
+    "Request","Response","Image","ImageBitmap","Audio","AudioContext",
+    "Node","Element","HTMLElement","Document","DocumentFragment","Event","CustomEvent",
+    "MouseEvent","KeyboardEvent","TouchEvent","Attr","CharacterData","Text","Comment",
+    "DOMTokenList","NodeList","HTMLCollection",
+    "Worker","SharedWorker","ServiceWorker","Notification","Permissions","Geolocation",
+    "BroadcastChannel","MessageChannel","MessagePort","AbortController","AbortSignal",
+    "IntersectionObserver","MutationObserver","ResizeObserver",
+    "XMLHttpRequest","WebSocket","EventSource","console",
+    "TEMPORARY","PERSISTENT","attr_list","attr","obj",
+    "onanimationend","onanimationiteration","onanimationstart","onsearch","ontransitionend",
+    "onwebkitanimationend","onwebkitanimationiteration","onwebkitanimationstart",
+    "onwebkittransitionend","onabort","onblur","oncancel","oncanplay","oncanplaythrough",
+    "onchange","onclick","onclose","oncontextmenu","oncuechange","ondblclick","ondrag",
+    "ondragend","ondragenter","ondragleave","ondragover","ondragstart","ondrop",
+    "ondurationchange","onemptied","onended","onerror","onfocus","oninput","oninvalid",
+    "onkeydown","onkeypress","onkeyup","onload","onloadeddata","onloadedmetadata",
+    "onloadstart","onmousedown","onmouseenter","onmouseleave","onmousemove","onmouseout",
+    "onmouseover","onmouseup","onmousewheel","onpause","onplay","onplaying","onprogress",
+    "onratechange","onreset","onresize","onscroll","onseeked","onseeking","onselect",
+    "onstalled","onsubmit","onsuspend","ontimeupdate","ontoggle","onvolumechange",
+    "onwaiting","onwheel","onauxclick","ongotpointercapture","onlostpointercapture",
+    "onpointerdown","onpointermove","onpointerup","onpointercancel","onpointerover",
+    "onpointerout","onpointerenter","onpointerleave","onselectstart","onselectionchange",
+    "onafterprint","onbeforeprint","onbeforeunload","onhashchange","onlanguagechange",
+    "onmessage","onmessageerror","onoffline","ononline","onpagehide","onpageshow",
+    "onpopstate","onrejectionhandled","onstorage","onunhandledrejection","onunload"
+  ];
+
+  // ===================== 分析风险 =====================
+  function analyzeRisk(name) {
+    const lower = name.toLowerCase();
+    const matchedKeywords = [];
+    let maxRisk = "safe";
+
+    // 检查高风险关键词
+    for (const [keyword, info] of Object.entries(RISK_DEFINITIONS.high.keywords)) {
+      if (lower.includes(keyword)) {
+        matchedKeywords.push({ keyword, risk: "high", ...info });
+        maxRisk = "high";
+      }
+    }
+
+    // 检查中风险关键词（如果还没命中高风险）
+    if (maxRisk === "safe") {
+      for (const [keyword, info] of Object.entries(RISK_DEFINITIONS.medium.keywords)) {
+        if (lower.includes(keyword)) {
+          matchedKeywords.push({ keyword, risk: "medium", ...info });
+          maxRisk = "medium";
+        }
+      }
+    }
+
+    return { risk: maxRisk, matchedKeywords };
+  }
+
+  // 获取单个关键词的风险详情（用于子属性显示）
+  function getKeywordDetail(name) {
+    const lower = name.toLowerCase();
+    // 先检查高风险
+    for (const [keyword, info] of Object.entries(RISK_DEFINITIONS.high.keywords)) {
+      if (lower.includes(keyword)) {
+        return { keyword, risk: "high", ...info };
+      }
+    }
+    // 再检查中风险
+    for (const [keyword, info] of Object.entries(RISK_DEFINITIONS.medium.keywords)) {
+      if (lower.includes(keyword)) {
+        return { keyword, risk: "medium", ...info };
+      }
+    }
+    return null;
+  }
+
+  // ===================== 扫描存储 =====================
+  try {
+    document.getElementById("cookie-value").textContent = document.cookie || "(空)";
+    document.getElementById("localstorage-value").textContent =
+      Object.keys(localStorage).length ? JSON.stringify(localStorage).slice(0, 200) : "(空)";
+  } catch(e) {
+    document.getElementById("cookie-value").textContent = "(无法访问)";
+    document.getElementById("localstorage-value").textContent = "(无法访问)";
+  }
+
+  // ===================== 扫描接口 =====================
+  const scanResults = [];
+  for (const key in window) {
+    if (WHITELIST.includes(key) || key.startsWith("webkit")) continue;
+
+    const obj = window[key];
+    const type = typeof obj;
+    const { risk, matchedKeywords } = analyzeRisk(key);
+    const methods = [];
+
+    // 收集方法和属性
+    if (obj && (type === "object" || type === "function")) {
+      try {
+        for (const prop in obj) {
+          const propType = typeof obj[prop];
+          const propAnalysis = analyzeRisk(prop);
+          const keywordDetail = getKeywordDetail(prop);
+          methods.push({
+            name: prop,
+            type: propType,
+            risk: propAnalysis.risk,
+            isFunction: propType === "function",
+            keywordDetail: keywordDetail // 保存关键词详情用于显示
+          });
+        }
+      } catch(e) {}
+    }
+
+    scanResults.push({
+      name: key,
+      type,
+      risk,
+      matchedKeywords,
+      methods,
+      obj // 保存引用用于调用
+    });
+  }
+
+  // 按风险排序
+  scanResults.sort((a, b) => {
+    const order = { high: 0, medium: 1, safe: 2 };
+    return order[a.risk] - order[b.risk];
+  });
+
+  // 统计
+  const counts = { high: 0, medium: 0, safe: 0 };
+  scanResults.forEach(r => counts[r.risk]++);
+  document.getElementById("total").textContent = scanResults.length;
+  document.getElementById("high").textContent = counts.high;
+  document.getElementById("medium").textContent = counts.medium;
+  document.getElementById("safe").textContent = counts.safe;
+
+  // ===================== 渲染 =====================
+  let currentFilter = "all";
+
+  window.render = function(filter) {
+    currentFilter = filter;
+    applyFilter();
+  };
+
+  window.applyFilter = function() {
+    const search = document.getElementById("search").value.toLowerCase();
+    let list = currentFilter === "all" ? scanResults : scanResults.filter(r => r.risk === currentFilter);
+
+    if (search) {
+      list = list.filter(r =>
+        r.name.toLowerCase().includes(search) ||
+        r.methods.some(m => m.name.toLowerCase().includes(search))
+      );
+    }
+
+    const container = document.getElementById("results");
+    if (!list.length) {
+      container.innerHTML = '<div class="empty">没有找到匹配的对象</div>';
+      return;
+    }
+
+    container.innerHTML = list.map((item, idx) => {
+      const methodsHtml = item.methods.length ?
+        `<div class="call-section">
+          <div class="call-label">可用方法/属性 (${item.methods.length} 项)</div>
+          <div class="method-list">
+            ${item.methods.slice(0, 10).map(m => {
+              const riskColor = m.risk === 'high' ? 'var(--red)' : m.risk === 'medium' ? 'var(--yellow)' : 'var(--text)';
+              const kw = m.keywordDetail;
+              return `
+                <div class="method-item" style="flex-direction:column;align-items:flex-start;">
+                  <div style="display:flex;align-items:center;gap:8px;width:100%;flex-wrap:wrap;">
+                    <span class="method-type ${m.isFunction ? 'function' : ''}">${m.type}</span>
+                    <span class="method-name" style="color:${riskColor};font-weight:600;">${m.name}</span>
+                    ${m.risk !== 'safe' ? `<span class="risk-tag ${m.risk}" style="font-size:10px;padding:2px 6px;">${m.risk.toUpperCase()}</span>` : ''}
+                    ${m.isFunction ? `<button class="method-btn" onclick="callMethod('${item.name}','${m.name}',${idx})">调用</button>` : ''}
+                    <button class="method-btn copy" onclick="copyText('${item.name}.${m.name}')">复制</button>
+                  </div>
+                  ${kw ? `
+                    <div style="margin-top:6px;padding-left:8px;font-size:12px;color:var(--text-dim);border-left:2px solid ${riskColor};width:100%;">
+                      <div style="color:${riskColor};font-weight:600;">匹配: ${kw.keyword} - ${kw.name}</div>
+                      <div style="margin-top:4px;">攻击场景: ${kw.attacks[0]}</div>
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+            ${item.methods.length > 10 ? `<div style="padding:8px;color:var(--text-dim);">...还有 ${item.methods.length - 10} 项</div>` : ''}
+          </div>
+        </div>` : '';
+
+      return `
+        <div class="item" data-idx="${idx}">
+          <div class="item-header" onclick="toggleItem(${idx})">
+            <div class="item-left">
+              <span class="item-name" style="color: var(--${item.risk})">${item.name}</span>
+              <span class="item-type">${item.type}</span>
+            </div>
+            <div class="item-right">
+              <span class="risk-tag ${item.risk}">${item.risk.toUpperCase()}</span>
+              <span class="arrow">▼</span>
+            </div>
+          </div>
+          <div class="item-body">
+            ${item.matchedKeywords.length ? `
+              <div class="risk-detail ${item.risk}">
+                <div class="risk-detail-title">⚠️ 风险分析</div>
+                <div class="matched-keywords">
+                  ${item.matchedKeywords.map(k => `<span class="keyword-tag ${k.risk}">${k.keyword} - ${k.name}</span>`).join('')}
+                </div>
+                <div class="attack-scenarios">
+                  <strong>潜在攻击场景：</strong>
+                  <ul>
+                    ${item.matchedKeywords[0].attacks.map(a => `<li>${a}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
+            ` : `
+              <div class="risk-detail safe">
+                <div class="risk-detail-title">✓ 未发现明显风险</div>
+                <div style="color:var(--text-dim);font-size:13px;">该接口名称未包含已知敏感关键词，但不代表绝对安全。建议手动检查接口功能。</div>
+              </div>
+            `}
+
+            <div class="call-panel">
+              <div class="call-title">接口调用</div>
+              ${methodsHtml}
+              <div class="call-section">
+                <div class="call-label">自定义调用</div>
+                <div class="call-input-group">
+                  <input type="text" class="call-input" id="call-input-${idx}" placeholder="参数 (JSON 或字符串)">
+                  <button class="call-btn" onclick="customCall('${item.name}', ${idx})">执行</button>
+                </div>
+                <div class="quick-call">
+                  <button class="quick-btn" onclick="copyText('${item.name}')">复制对象名</button>
+                  <button class="quick-btn" onclick="showObjInfo('${item.name}', ${idx})">查看详情</button>
+                  <button class="quick-btn" onclick="tryNoArgsCall('${item.name}', ${idx})">无参调用</button>
+                </div>
+              </div>
+              <div class="call-result" id="call-result-${idx}" style="display:none;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  };
+
+  // ===================== 调用函数 =====================
+  window.toggleItem = function(idx) {
+    const item = document.querySelector(`.item[data-idx="${idx}"]`);
+    item.classList.toggle("expanded");
+  };
+
+  window.callMethod = function(objName, methodName, idx) {
+    const input = document.getElementById(`call-input-${idx}`)?.value || "";
+    const resultDiv = document.getElementById(`call-result-${idx}`);
+    resultDiv.style.display = "block";
+    resultDiv.className = "call-result info";
+    resultDiv.textContent = "执行中...";
+
+    setTimeout(() => {
+      try {
+        const obj = window[objName];
+        const method = obj[methodName];
+        let args = [];
+
+        if (input.trim()) {
+          try {
+            args = [JSON.parse(input)];
+          } catch {
+            args = [input];
+          }
+        }
+
+        const result = method.apply(obj, args);
+        resultDiv.className = "call-result success";
+        resultDiv.textContent = `✓ 调用成功\n返回类型: ${typeof result}\n返回值: ${JSON.stringify(result, null, 2) || String(result)}`;
+      } catch(err) {
+        resultDiv.className = "call-result error";
+        resultDiv.textContent = `✗ 调用失败\n错误: ${err.message}\n\n提示: 该方法可能需要特定参数，请尝试提供JSON格式参数`;
+      }
+    }, 50);
+  };
+
+  window.customCall = function(objName, idx) {
+    const input = document.getElementById(`call-input-${idx}`)?.value || "";
+    const resultDiv = document.getElementById(`call-result-${idx}`);
+    resultDiv.style.display = "block";
+    resultDiv.className = "call-result info";
+    resultDiv.textContent = "执行中...";
+
+    setTimeout(() => {
+      try {
+        const obj = window[objName];
+        const type = typeof obj;
+
+        if (type === "function") {
+          let args = [];
+          if (input.trim()) {
+            try { args = [JSON.parse(input)]; } catch { args = [input]; }
+          }
+          const result = obj.apply(null, args);
+          resultDiv.className = "call-result success";
+          resultDiv.textContent = `✓ 调用成功\n返回: ${JSON.stringify(result, null, 2) || String(result)}`;
+        } else if (type === "object") {
+          resultDiv.className = "call-result info";
+          resultDiv.textContent = `对象信息:\n类型: ${type}\n属性数: ${Object.keys(obj).length}\nJSON: ${JSON.stringify(obj, null, 2).slice(0, 500)}`;
+        } else {
+          resultDiv.className = "call-result success";
+          resultDiv.textContent = `值: ${String(obj)}`;
+        }
+      } catch(err) {
+        resultDiv.className = "call-result error";
+        resultDiv.textContent = `✗ 执行失败\n错误: ${err.message}`;
+      }
+    }, 50);
+  };
+
+  window.tryNoArgsCall = function(objName, idx) {
+    const resultDiv = document.getElementById(`call-result-${idx}`);
+    resultDiv.style.display = "block";
+    resultDiv.className = "call-result info";
+    resultDiv.textContent = "尝试无参调用...";
+
+    setTimeout(() => {
+      try {
+        const obj = window[objName];
+        if (typeof obj === "function") {
+          const result = obj();
+          resultDiv.className = "call-result success";
+          resultDiv.textContent = `✓ 无参调用成功\n返回: ${JSON.stringify(result, null, 2) || String(result)}`;
+        } else {
+          resultDiv.className = "call-result info";
+          resultDiv.textContent = `这是一个 ${typeof obj} 类型，不是函数，无法直接调用。\n尝试"查看详情"获取更多信息。`;
+        }
+      } catch(err) {
+        resultDiv.className = "call-result error";
+        resultDiv.textContent = `✗ 无参调用失败\n错误: ${err.message}\n\n该方法可能需要参数，请尝试在输入框中提供参数。`;
+      }
+    }, 50);
+  };
+
+  window.showObjInfo = function(objName, idx) {
+    const resultDiv = document.getElementById(`call-result-${idx}`);
+    resultDiv.style.display = "block";
+
+    try {
+      const obj = window[objName];
+      const info = {
+        类型: typeof obj,
+        是否为数组: Array.isArray(obj),
+        是否为null: obj === null
+      };
+
+      if (typeof obj === "function") {
+        info.函数代码 = obj.toString().slice(0, 300);
+      }
+
+      if (obj && typeof obj === "object") {
+        info.可枚举属性 = Object.keys(obj);
+        info.原型链 = Object.getPrototypeOf(obj)?.constructor?.name || "无";
+      }
+
+      resultDiv.className = "call-result success";
+      resultDiv.textContent = `对象详情:\n${JSON.stringify(info, null, 2)}`;
+    } catch(err) {
+      resultDiv.className = "call-result error";
+      resultDiv.textContent = `获取信息失败: ${err.message}`;
+    }
+  };
+
+  window.copyText = function(text) {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    showToast("已复制: " + text);
+  };
+
+  function showToast(msg) {
+    const toast = document.getElementById("toast");
+    toast.textContent = msg;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2000);
+  }
+
+  // ===================== 导出 =====================
+  window.exportJSON = function() {
+    const data = {
+      scanTime: new Date().toISOString(),
+      url: location.href,
+      userAgent: navigator.userAgent,
+      cookie: document.cookie,
+      results: scanResults.map(r => ({
+        name: r.name,
+        type: r.type,
+        risk: r.risk,
+        matchedKeywords: r.matchedKeywords.map(k => k.keyword),
+        methods: r.methods.map(m => ({ name: m.name, type: m.type, risk: m.risk }))
+      }))
+    };
+    showModal("导出JSON", JSON.stringify(data, null, 2));
+  };
+
+  window.exportReport = function() {
+    let md = `# JSBridge 扫描报告\n\n`;
+    md += `扫描时间: ${new Date().toLocaleString()}\n`;
+    md += `页面: ${location.href}\n\n`;
+    md += `## 统计\n- 总计: ${scanResults.length}\n- 高风险: ${counts.high}\n- 中风险: ${counts.medium}\n- 安全: ${counts.safe}\n\n`;
+    md += `## 检测结果\n\n`;
+
+    ["high", "medium", "safe"].forEach(risk => {
+      const items = scanResults.filter(r => r.risk === risk);
+      if (!items.length) return;
+      md += `### ${risk.toUpperCase()} (${items.length}项)\n\n`;
+      items.forEach(item => {
+        md += `#### ${item.name} (${item.type})\n`;
+        if (item.matchedKeywords.length) {
+          md += `匹配关键词: ${item.matchedKeywords.map(k => k.keyword).join(", ")}\n`;
+          md += `攻击场景:\n${item.matchedKeywords[0].attacks.map(a => "- " + a).join("\n")}\n`;
+        }
+        if (item.methods.length) {
+          md += `方法: ${item.methods.slice(0, 5).map(m => m.name).join(", ")}\n`;
+        }
+        md += `\n`;
+      });
+    });
+
+    showModal("导出报告", md);
+  };
+
+  window.showModal = function(title, content) {
+    document.getElementById("modal-title").textContent = title;
+    document.getElementById("modal-body").textContent = content;
+    document.getElementById("modal").classList.add("show");
+  };
+
+  window.closeModal = function() {
+    document.getElementById("modal").classList.remove("show");
+  };
+
+  window.copyModal = function() {
+    copyText(document.getElementById("modal-body").textContent);
+  };
+
+  // 初始化
+  render("all");
+
+  setTimeout(() => {
+    alert(`扫描完成！\n\n共发现 ${scanResults.length} 个接口\n高风险: ${counts.high}\n中风险: ${counts.medium}\n安全: ${counts.safe}`);
+  }, 300);
+})();
+</script>
+</body>
+</html>
