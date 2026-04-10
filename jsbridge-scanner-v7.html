@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>JSBridge Scanner v7 - 专业安全检测版</title>
+<style>
+:root {
+--bg: #0f0f23; --card: #1a1a2e; --card-hover: #16213e;
+--text: #eee; --text-dim: #888;
+--blue: #00d4ff; --red: #ff4757; --yellow: #ffa502; --green: #2ed573;
+--purple: #a855f7; --orange: #ff7f50; --critical: #ff0040;
+--font-size-base: 14px;
+}
+@media (max-width: 480px) { :root { --font-size-base: 12px; } }
+@media (min-width: 800px) { :root { --font-size-base: 16px; } }
+* { box-sizing: border-box; }
+body {
+font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+background: var(--bg);
+color: var(--text);
+margin: 0;
+padding: 0;
+font-size: var(--font-size-base);
+line-height: 1.5;
+}
+.container { max-width: 900px; margin: 0 auto; padding: 10px; }
+
+.header { text-align: center; padding: 15px 0 10px; }
+.header h1 { margin: 0; font-size: 1.5em; color: var(--blue); font-weight: 700; }
+.header .badge { background: var(--purple); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.75em; margin-left: 5px; }
+.header p { color: var(--text-dim); font-size: 0.85em; margin-top: 5px; }
+
+/* 统计 - 修改顺序为 高→中→低→待确认 */
+.stats { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.stat-box { flex: 1; min-width: 50px; background: var(--card); padding: 8px 5px; border-radius: 8px; text-align: center; cursor: pointer; }
+.stat-box .count { font-size: 1.4em; font-weight: bold; display: block; }
+.stat-box .label { font-size: 0.7em; color: var(--text-dim); }
+.stat-box.high .count { color: var(--red); }
+.stat-box.medium .count { color: var(--yellow); }
+.stat-box.low .count { color: var(--green); }
+.stat-box.pending .count { color: var(--purple); }
+.stat-box.total .count { color: var(--blue); }
+
+/* 接口列表 */
+.results { margin-bottom: 15px; }
+.item { background: var(--card); border-radius: 8px; margin-bottom: 8px; overflow: hidden; border-left: 3px solid transparent; }
+.item.high { border-left-color: var(--red); }
+.item.medium { border-left-color: var(--yellow); }
+.item.low { border-left-color: var(--green); }
+.item.pending { border-left-color: var(--purple); }
+
+.item-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.item-name { font-weight: 600; font-size: 0.95em; }
+.item-type { color: var(--text-dim); font-size: 0.7em; background: var(--bg); padding: 1px 4px; border-radius: 3px; margin-left: 4px; }
+.item-right { display: flex; align-items: center; gap: 5px; }
+.risk-tag { padding: 3px 6px; border-radius: 10px; font-size: 0.65em; font-weight: bold; }
+.risk-tag.high { background: var(--red); color: #fff; }
+.risk-tag.medium { background: var(--yellow); color: #000; }
+.risk-tag.low { background: var(--green); color: #000; }
+.risk-tag.pending { background: var(--purple); color: #fff; }
+.arrow { font-size: 0.7em; color: var(--text-dim); }
+
+.item-body { display: none; padding: 0 10px 10px; border-top: 1px solid var(--card-hover); }
+.item.expanded .item-body { display: block; }
+
+.item-info { padding: 8px; background: rgba(0,212,255,0.1); border-radius: 6px; margin-bottom: 10px; font-size: 0.8em; }
+.item-info-title { color: var(--blue); font-weight: 600; margin-bottom: 4px; }
+.item-info-desc { color: var(--text-dim); }
+
+.method-list { max-height: 300px; overflow-y: auto; }
+.method-item { padding: 6px; background: var(--bg); border-radius: 4px; margin-bottom: 4px; }
+.method-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.method-type { font-size: 0.65em; padding: 1px 4px; border-radius: 3px; background: var(--purple); color: #fff; }
+.method-type.function { background: var(--blue); color: #000; }
+.method-name { font-family: monospace; font-size: 0.8em; }
+.method-btn { padding: 3px 6px; border: none; border-radius: 3px; font-size: 0.7em; cursor: pointer; background: var(--blue); color: #000; }
+
+/* 调用面板 */
+.call-panel { margin-top: 10px; background: var(--bg); border-radius: 6px; padding: 10px; }
+.call-title { font-size: 0.85em; font-weight: 600; margin-bottom: 8px; color: var(--blue); }
+.call-section { margin-bottom: 10px; }
+.call-label { font-size: 0.75em; color: var(--text-dim); margin-bottom: 4px; }
+.call-input-group { display: flex; gap: 5px; }
+.call-input { flex: 1; padding: 6px; border: 1px solid var(--card); border-radius: 4px; background: var(--card); color: var(--text); font-size: 0.8em; font-family: monospace; }
+.call-btn { padding: 6px 10px; border: none; border-radius: 4px; background: var(--blue); color: #000; font-weight: 600; cursor: pointer; font-size: 0.8em; }
+.call-result { margin-top: 8px; padding: 8px; border-radius: 4px; font-size: 0.75em; font-family: monospace; white-space: pre-wrap; word-break: break-all; max-height: 150px; overflow: auto; }
+.call-result.success { background: rgba(46,213,115,0.1); border-left: 2px solid var(--green); }
+.call-result.error { background: rgba(255,71,87,0.1); border-left: 2px solid var(--red); }
+.call-result.info { background: rgba(0,212,255,0.1); border-left: 2px solid var(--blue); }
+
+/* 工具栏 */
+.toolbar { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+.tool-btn { padding: 8px 10px; border: none; border-radius: 5px; background: var(--card); color: var(--text); font-size: 0.85em; cursor: pointer; }
+.tool-btn:active { background: var(--card-hover); }
+.tool-btn.primary { background: var(--blue); color: #000; }
+
+/* Modal */
+.modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 15px; }
+.modal.show { display: flex; }
+.modal-content { background: var(--card); border-radius: 10px; padding: 15px; max-width: 700px; width: 100%; max-height: 85vh; overflow: auto; }
+.modal-title { font-size: 1.1em; font-weight: 600; margin-bottom: 10px; }
+.modal-body { font-size: 0.75em; font-family: monospace; background: var(--bg); padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; max-height: 60vh; overflow: auto; }
+.modal-btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 0.9em; font-weight: 600; cursor: pointer; margin-top: 8px; }
+.modal-btn.primary { background: var(--blue); color: #000; }
+.modal-btn.secondary { background: var(--card-hover); color: var(--text); }
+
+.toast { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); background: var(--card); color: var(--text); padding: 8px 16px; border-radius: 14px; font-size: 0.85em; z-index: 2000; opacity: 0; transition: opacity 0.3s; max-width: 90%; text-align: center; }
+.toast.show { opacity: 1; }
+
+.empty { text-align: center; color: var(--text-dim); padding: 20px; font-size: 0.9em; }
+
+/* 搜索 */
+.search-box { margin-bottom: 10px; }
+.search-input { width: 100%; padding: 10px; border: 2px solid var(--card); border-radius: 6px; background: var(--card); color: var(--text); font-size: 1em; outline: none; }
+.search-input:focus { border-color: var(--blue); }
+</style>
+</head>
+<body>
+<div class="container">
+<div class="header">
+<h1>JSBridge Scanner v7<span class="badge">专业版</span></h1>
+<p>智能接口功能识别 | 风险等级评估</p>
+</div>
+
+<!-- 统计栏：高→中→低→待确认 顺序 -->
+<div class="stats" id="stats"></div>
+
+<div class="search-box">
+<input type="text" class="search-input" id="search" placeholder="搜索接口或方法..." oninput="applySearch()">
+</div>
+
+<div class="toolbar">
+<button class="tool-btn" onclick="expandAll()">展开全部</button>
+<button class="tool-btn" onclick="collapseAll()">折叠全部</button>
+<button class="tool-btn" onclick="exportJSON()">导出JSON</button>
+<button class="tool-btn" onclick="exportReport()">导出报告</button>
+<button class="tool-btn primary" onclick="location.reload()">重新扫描</button>
+</div>
+
+<div class="results" id="results"></div>
+</div>
+
+<div class="modal" id="modal">
+<div class="modal-content">
+<div class="modal-title" id="modal-title"></div>
+<div class="modal-body" id="modal-body"></div>
+<button class="modal-btn primary" onclick="copyModal()">复制</button>
+<button class="modal-btn secondary" onclick="closeModal()">关闭</button>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+// ===================== 接口功能知识库 =====================
+const INTERFACE_KNOWLEDGE = {
+// ===== 高风险 =====
+exec: {
+category: "代码执行",
+desc: "可能执行任意代码，属于严重风险",
+riskLevel: "high",
+keywords: ["exec", "eval", "shell", "cmd", "execute", "runcommand", "searchBoxJavaBridge_", "accessibilityTraversal"]
+},
+payment: {
+category: "支付",
+desc: "涉及支付操作，可能存在未授权支付风险",
+riskLevel: "high",
+keywords: ["pay", "payment", "alipay", "wxpay", "tradepay", "dopay", "startpay"]
+},
+sms: {
+category: "短信",
+desc: "发送短信，可能被滥用发送扣费短信",
+riskLevel: "high",
+keywords: ["sendsms", "sms", "sendsmessage", "smsmanager"]
+},
+app: {
+category: "应用管理",
+desc: "安装/卸载应用，可能被滥用安装恶意应用",
+riskLevel: "high",
+keywords: ["install", "installapp", "installapk", "uninstall", "launchapp", "openapp"]
+},
+contact: {
+category: "通讯录",
+desc: "访问通讯录，可获取用户所有联系人信息",
+riskLevel: "high",
+keywords: ["contact", "addressbook", "getcontacts", "contacts", "showaddressbook"]
+},
+file: {
+category: "文件操作",
+desc: "读写文件，可能读取应用私有数据",
+riskLevel: "high",
+keywords: ["readfile", "writefile", "getfile", "savefile", "openfile", "downloadfile"]
+},
+navigation: {
+category: "URL/导航",
+desc: "打开URL或跳转，可能被用于钓鱼或XSS",
+riskLevel: "high",
+keywords: ["openurl", "loadurl", "openlink", "openweb", "startactivity", "openpage"]
+},
+
+// ===== 中风险 =====
+location: {
+category: "定位",
+desc: "获取GPS位置，可追踪用户位置",
+riskLevel: "medium",
+keywords: ["location", "getlocation", "geolocation", "gps", "position", "getposition"]
+},
+device: {
+category: "设备信息",
+desc: "获取设备标识(IMEI/IMSI/MAC等)",
+riskLevel: "medium",
+keywords: ["device", "deviceid", "imei", "imsi", "mac", "androidid", "uuid", "getdevice"]
+},
+userinfo: {
+category: "用户信息",
+desc: "获取用户个人信息",
+riskLevel: "medium",
+keywords: ["userinfo", "getuser", "userprofile", "getprofile", "account"]
+},
+clipboard: {
+category: "剪贴板",
+desc: "读写剪贴板，可能泄露验证码等敏感信息",
+riskLevel: "medium",
+keywords: ["clipboard", "copy", "paste", "setclipboard", "getclipboard"]
+},
+audio: {
+category: "音频",
+desc: "录音功能，需确认是否有明显提示",
+riskLevel: "medium",
+keywords: ["audio", "record", "voice", "microphone", "startrecord", "stoprecord"]
+},
+speech: {
+category: "语音识别",
+desc: "语音识别功能，需确认是否有用户提示",
+riskLevel: "medium",
+keywords: ["speech", "speechrecognition", "recognize"]
+},
+network: {
+category: "网络请求",
+desc: "发起网络请求，可能泄露数据",
+riskLevel: "medium",
+keywords: ["request", "fetch", "ajax", "http", "upload", "httprequest"]
+},
+
+// ===== 低风险 =====
+camera: {
+category: "相机/图片",
+desc: "调用摄像头或选择图片，属于正常UI功能",
+riskLevel: "low",
+keywords: ["camera", "photo", "takephoto", "chooseimage", "selectimage", "openCamera", "openCameraOrPhoto", "openCameraOrPhotoOtherJSPlugin", "openCameraPermission"]
+},
+album: {
+category: "相册",
+desc: "访问相册选择图片，属于正常UI功能",
+riskLevel: "low",
+keywords: ["album", "gallery", "picture", "saveimage", "previewimage"]
+},
+notification: {
+category: "通知",
+desc: "发送通知，一般无明显风险",
+riskLevel: "low",
+keywords: ["notification", "toast", "alert", "showtoast", "push"]
+},
+share: {
+category: "分享",
+desc: "分享内容，一般无明显风险",
+riskLevel: "low",
+keywords: ["share", "shareto", "sharelink", "socialshare"]
+},
+scan: {
+category: "扫码",
+desc: "调用扫码功能，一般无明显风险",
+riskLevel: "low",
+keywords: ["scan", "qrcode", "barcode", "scancode"]
+},
+storage: {
+category: "存储",
+desc: "本地存储操作，一般用于缓存",
+riskLevel: "low",
+keywords: ["storage", "localstorage", "setdata", "getdata", "savedata", "preference"]
+},
+permission: {
+category: "权限",
+desc: "请求系统权限，属于正常功能",
+riskLevel: "low",
+keywords: ["permission", "requestpermission", "checkpermission", "requestauth"]
+},
+biometric: {
+category: "生物识别",
+desc: "指纹/面容识别，属于安全功能",
+riskLevel: "low",
+keywords: ["fingerprint", "faceid", "touchid", "biometric"]
+},
+navigationUI: {
+category: "导航/UI",
+desc: "页面导航或UI相关，一般无明显风险",
+riskLevel: "low",
+keywords: ["navigation", "showNavigation", "jumppagepath", "navigationbar"]
+},
+airport: {
+category: "机场/航班",
+desc: "机场或航班信息显示，一般无明显风险",
+riskLevel: "low",
+keywords: ["airport", "flight", "showAirportInterest"]
+},
+privacy: {
+category: "隐私设置",
+desc: "隐私政策相关，一般无明显风险",
+riskLevel: "low",
+keywords: ["privacy", "privacypolicy", "canlePrivacyPolicy"]
+}
+};
+
+// ===================== 接口识别 =====================
+function identifyInterface(name) {
+const str = name.toLowerCase();
+for (const [category, info] of Object.entries(INTERFACE_KNOWLEDGE)) {
+for (const kw of info.keywords) {
+if (str.includes(kw.toLowerCase())) {
+return { category, ...info, matchedKeyword: kw };
+}
+}
+}
+return null;
+}
+
+// ===================== 基线检测 =====================
+function getInjectedProps() {
+try {
+const iframe = document.createElement('iframe');
+iframe.style.display = 'none';
+document.body.appendChild(iframe);
+const cleanWindow = iframe.contentWindow;
+const current = Object.getOwnPropertyNames(window);
+const clean = Object.getOwnPropertyNames(cleanWindow);
+document.body.removeChild(iframe);
+return current.filter(p => !clean.includes(p));
+} catch(e) {
+const baseline = ["postMessage","blur","focus","close","parent","opener","top","length","frames","closed","location","self","window","document","name","customElements","history","locationbar","menubar","personalbar","scrollbars","statusbar","toolbar","status","frameElement","navigator","origin","external","screen","innerWidth","innerHeight","scrollX","pageXOffset","scrollY","pageYOffset","visualViewport","screenX","screenY","outerWidth","outerHeight","devicePixelRatio","clientInformation","screenLeft","screenTop","defaultStatus","defaultstatus","styleMedia","isSecureContext","performance","stop","open","alert","confirm","prompt","print","queueMicrotask","requestAnimationFrame","cancelAnimationFrame","captureEvents","releaseEvents","requestIdleCallback","cancelIdleCallback","getComputedStyle","matchMedia","moveTo","moveBy","resizeTo","resizeBy","scroll","scrollTo","scrollBy","getSelection","find","webkitRequestAnimationFrame","webkitCancelAnimationFrame","fetch","btoa","atob","setTimeout","clearTimeout","setInterval","clearInterval","createImageBitmap","onappinstalled","onbeforeinstallprompt","crypto","ondevicemotion","ondeviceorientation","ondeviceorientationabsolute","indexedDB","webkitStorageInfo","sessionStorage","localStorage","orientation","onorientationchange","openDatabase","ontouchcancel","ontouchend","ontouchmove","ontouchstart","TEMPORARY","PERSISTENT","addEventListener","removeEventListener","dispatchEvent"];
+const result = [];
+for (const key in window) {
+if (!baseline.includes(key) && !key.startsWith("on") && !key.startsWith("webkit")) {
+result.push(key);
+}
+}
+return result;
+}
+}
+
+// ===================== JSBridge识别 =====================
+function isLikelyBridge(obj) {
+if (!obj) return false;
+try {
+const type = typeof obj;
+if (type === "function") return true;
+if (type !== "object") return false;
+const keys = Object.keys(obj);
+if (keys.length === 0 || keys.length > 100) return false;
+return keys.some(k => typeof obj[k] === "function");
+} catch(e) {
+return false;
+}
+}
+
+// ===================== 风险分析 =====================
+function analyzeRisk(name) {
+const interfaceInfo = identifyInterface(name);
+if (interfaceInfo) {
+return {
+level: interfaceInfo.riskLevel,
+interfaceInfo: interfaceInfo
+};
+}
+return { level: "pending", interfaceInfo: null };
+}
+
+// ===================== 扫描执行 =====================
+const injectedProps = getInjectedProps();
+const scanResults = [];
+
+for (const key of injectedProps) {
+const obj = window[key];
+const type = typeof obj;
+
+if (!isLikelyBridge(obj)) continue;
+
+const methods = [];
+const objRisk = analyzeRisk(key);
+let maxRisk = objRisk.level;
+
+// 统计各方法的分类
+const methodCategories = {};
+
+if (obj && (type === "object" || type === "function")) {
+for (const prop in obj) {
+try {
+const propType = typeof obj[prop];
+const propRisk = analyzeRisk(prop);
+
+// 记录方法分类
+if (propRisk.interfaceInfo) {
+const cat = propRisk.interfaceInfo.category;
+if (!methodCategories[cat]) methodCategories[cat] = 0;
+methodCategories[cat]++;
+}
+
+const levelOrder = { high: 0, medium: 1, low: 2, pending: 3 };
+if (levelOrder[propRisk.level] < levelOrder[maxRisk]) maxRisk = propRisk.level;
+
+methods.push({
+name: prop,
+type: propType,
+risk: propRisk.level,
+interfaceInfo: propRisk.interfaceInfo
+});
+} catch(e) {}
+}
+}
+
+scanResults.push({
+name: key,
+type: type,
+risk: maxRisk,
+methods: methods,
+interfaceInfo: objRisk.interfaceInfo,
+methodCategories: methodCategories
+});
+}
+
+// 排序：高→中→低→待确认
+const order = { high: 0, medium: 1, low: 2, pending: 3 };
+scanResults.sort((a, b) => order[a.risk] - order[b.risk]);
+
+// 统计各风险等级的接口数量
+const counts = { high: 0, medium: 0, low: 0, pending: 0, total: scanResults.length };
+scanResults.forEach(r => counts[r.risk]++);
+
+// 统计各风险等级的方法数量
+const methodCounts = { high: 0, medium: 0, low: 0, pending: 0 };
+scanResults.forEach(item => {
+item.methods.forEach(m => methodCounts[m.risk]++);
+});
+
+window.scanResults = scanResults;
+
+// ===================== 渲染统计栏（高→中→低→待确认）=====================
+document.getElementById("stats").innerHTML = `
+<div class="stat-box high" onclick="filterByRisk('high')">
+<span class="count">${counts.high}</span>
+<span class="label">高危</span>
+</div>
+<div class="stat-box medium" onclick="filterByRisk('medium')">
+<span class="count">${counts.medium}</span>
+<span class="label">中危</span>
+</div>
+<div class="stat-box low" onclick="filterByRisk('low')">
+<span class="count">${counts.low}</span>
+<span class="label">低危</span>
+</div>
+<div class="stat-box pending" onclick="filterByRisk('pending')">
+<span class="count">${counts.pending}</span>
+<span class="label">待确认</span>
+</div>
+<div class="stat-box total" onclick="filterByRisk('all')">
+<span class="count">${counts.total}</span>
+<span class="label">总计</span>
+</div>
+`;
+
+// ===================== 渲染接口列表（按高→中→低→待确认排序）=====================
+let currentFilter = "all";
+renderResults(currentFilter);
+
+function renderResults(filter) {
+currentFilter = filter;
+let list = filter === "all" ? [...scanResults] : scanResults.filter(r => r.risk === filter);
+
+const search = document.getElementById("search").value.toLowerCase();
+if (search) {
+list = list.filter(r =>
+r.name.toLowerCase().includes(search) ||
+r.methods.some(m => m.name.toLowerCase().includes(search))
+);
+}
+
+// 确保排序：高→中→低→待确认
+list.sort((a, b) => order[a.risk] - order[b.risk]);
+
+const container = document.getElementById("results");
+if (!list.length) {
+container.innerHTML = '<div class="empty">没有找到匹配的接口</div>';
+return;
+}
+
+container.innerHTML = list.map((item, idx) => `
+<div class="item ${item.risk}" data-idx="${idx}">
+<div class="item-header" onclick="toggleItem(${idx})">
+<div>
+<span class="item-name">${item.name}</span>
+<span class="item-type">${item.type}</span>
+${item.interfaceInfo ? `<span style="color:var(--text-dim);font-size:0.7em;margin-left:4px;">[${item.interfaceInfo.category}]</span>` : ''}
+</div>
+<div class="item-right">
+<span class="risk-tag ${item.risk}">${item.risk.toUpperCase()}</span>
+<span class="arrow">▼</span>
+</div>
+</div>
+<div class="item-body">
+${item.interfaceInfo ? `
+<div class="item-info">
+<div class="item-info-title">📌 ${item.interfaceInfo.category}</div>
+<div class="item-info-desc">${item.interfaceInfo.desc}</div>
+</div>
+` : ''}
+<div class="method-list">
+${item.methods.map(m => `
+<div class="method-item">
+<div class="method-row">
+<span class="method-type ${m.type === 'function' ? 'function' : ''}">${m.type}</span>
+<span class="method-name">${m.name}</span>
+${m.interfaceInfo ? `<span style="font-size:0.65em;color:var(--text-dim);">[${m.interfaceInfo.category}]</span>` : ''}
+${m.risk !== 'low' ? `<span class="risk-tag ${m.risk}" style="font-size:0.6em;padding:1px 4px;">${m.risk}</span>` : ''}
+</div>
+</div>
+`).join("")}
+</div>
+
+<div class="call-panel">
+<div class="call-title">🔧 调用测试</div>
+<div class="call-section">
+<div class="call-input-group">
+<input type="text" class="call-input" id="call-input-${idx}" placeholder='输入参数或留空'>
+<button class="call-btn" onclick="tryCall('${item.name}', ${idx})">执行</button>
+</div>
+</div>
+<div class="call-result" id="call-result-${idx}" style="display:none;"></div>
+</div>
+</div>
+</div>
+`).join("");
+}
+
+window.renderResults = renderResults;
+
+window.filterByRisk = function(risk) {
+document.getElementById("search").value = "";
+renderResults(risk);
+};
+
+window.applySearch = function() {
+renderResults(currentFilter);
+};
+
+window.toggleItem = function(idx) {
+const item = document.querySelector(`.item[data-idx="${idx}"]`);
+if (item) item.classList.toggle('expanded');
+};
+
+window.expandAll = function() {
+document.querySelectorAll('.item').forEach(el => el.classList.add('expanded'));
+};
+
+window.collapseAll = function() {
+document.querySelectorAll('.item').forEach(el => el.classList.remove('expanded'));
+};
+
+// ===================== 调用测试 =====================
+window.tryCall = function(objName, idx) {
+const input = document.getElementById(`call-input-${idx}`)?.value || "";
+const resultDiv = document.getElementById(`call-result-${idx}`);
+resultDiv.style.display = "block";
+resultDiv.className = "call-result info";
+resultDiv.textContent = "执行中...";
+
+setTimeout(() => {
+try {
+const obj = window[objName];
+const type = typeof obj;
+
+if (type === "function") {
+let args = [];
+if (input.trim()) {
+try { args = [JSON.parse(input)]; } catch { args = [input]; }
+}
+const result = obj.apply(null, args);
+resultDiv.className = "call-result success";
+resultDiv.textContent = `✓ 成功\n返回: ${JSON.stringify(result, null, 2) || String(result)}`;
+} else if (type === "object") {
+resultDiv.className = "call-result info";
+resultDiv.textContent = `对象信息:\n类型: ${type}\n属性: ${Object.keys(obj).length}个\n${JSON.stringify(obj, null, 2).slice(0, 300)}`;
+} else {
+resultDiv.className = "call-result success";
+resultDiv.textContent = `值: ${String(obj)}`;
+}
+} catch(err) {
+resultDiv.className = "call-result error";
+resultDiv.textContent = `✗ 失败: ${err.message}`;
+}
+}, 50);
+};
+
+// ===================== 导出 =====================
+window.exportJSON = function() {
+const data = {
+scanTime: new Date().toISOString(),
+url: location.href,
+userAgent: navigator.userAgent,
+summary: {
+total: counts.total,
+high: counts.high,
+medium: counts.medium,
+low: counts.low,
+pending: counts.pending
+},
+interfaces: scanResults
+};
+showModal("导出JSON", JSON.stringify(data, null, 2));
+};
+
+window.exportReport = function() {
+let md = `# JSBridge 安全检测报告\n\n`;
+md += `**扫描时间:** ${new Date().toLocaleString()}\n`;
+md += `**页面:** ${location.href}\n\n`;
+md += `## 检测结果\n\n`;
+md += `- 高危: ${counts.high}\n`;
+md += `- 中危: ${counts.medium}\n`;
+md += `- 低危: ${counts.low}\n`;
+md += `- 待确认: ${counts.pending}\n`;
+md += `- 总计: ${counts.total}\n\n`;
+
+md += `## 接口详情（按风险排序）\n\n`;
+scanResults.forEach(item => {
+md += `### ${item.name} [${item.risk.toUpperCase()}]\n`;
+if (item.interfaceInfo) {
+md += `- 类别: ${item.interfaceInfo.category}\n`;
+md += `- 说明: ${item.interfaceInfo.desc}\n`;
+}
+md += `- 方法数: ${item.methods.length}\n`;
+item.methods.forEach(m => {
+md += `  - ${m.name} (${m.risk})${m.interfaceInfo ? ` [${m.interfaceInfo.category}]` : ''}\n`;
+});
+md += `\n`;
+});
+
+showModal("导出报告", md);
+};
+
+window.showModal = function(title, content) {
+document.getElementById("modal-title").textContent = title;
+document.getElementById("modal-body").textContent = content;
+document.getElementById("modal").classList.add("show");
+};
+
+window.closeModal = function() {
+document.getElementById("modal").classList.remove("show");
+};
+
+window.copyModal = function() {
+const text = document.getElementById("modal-body").textContent;
+navigator.clipboard.writeText(text);
+showToast("已复制");
+};
+
+function showToast(msg) {
+const toast = document.getElementById("toast");
+toast.textContent = msg;
+toast.classList.add("show");
+setTimeout(() => toast.classList.remove("show"), 1500);
+}
+
+// 扫描完成
+setTimeout(() => {
+let msg = `扫描完成!\n\n`;
+msg += `接口统计:\n`;
+msg += `- 高危: ${counts.high}\n`;
+msg += `- 中危: ${counts.medium}\n`;
+msg += `- 低危: ${counts.low}\n`;
+msg += `- 待确认: ${counts.pending}\n`;
+msg += `- 总计: ${counts.total}\n`;
+alert(msg);
+}, 100);
+
+})();
+</script>
+</body>
+</html>
