@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>JSBridge Scanner v10</title>
+<style>
+:root {
+ --bg: #0f0f23; --card: #1a1a2e; --card-hover: #16213e;
+ --text: #eee; --text-dim: #888;
+ --blue: #00d4ff; --red: #ff4757; --yellow: #ffa502; --green: #2ed573;
+ --purple: #a855f7; --orange: #ff7f50; --critical: #ff0040;
+ --font-size-base: 14px;
+}
+[data-theme="light"] {
+ --bg: #f5f5f5; --card: #ffffff; --card-hover: #e8e8e8;
+ --text: #222; --text-dim: #666;
+}
+@media (max-width: 480px) { :root { --font-size-base: 12px; } }
+@media (min-width: 800px) { :root { --font-size-base: 16px; } }
+* { box-sizing: border-box; }
+body {
+ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+ background: var(--bg); color: var(--text); margin: 0; padding: 0;
+ font-size: var(--font-size-base); line-height: 1.5;
+}
+.container { max-width: 1000px; margin: 0 auto; padding: 12px; }
+
+/* 头部 */
+.header { text-align: center; padding: 12px 0 8px; }
+.header h1 { margin: 0; font-size: 1.4em; color: var(--blue); font-weight: 700; }
+.header p { color: var(--text-dim); font-size: 0.8em; margin-top: 4px; }
+.theme-toggle { position: absolute; top: 15px; right: 15px; background: var(--card); border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; color: var(--text); font-size: 0.85em; }
+.theme-toggle:hover { background: var(--card-hover); }
+
+/* 存储信息面板 */
+.storage-panel { background: var(--card); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.storage-title { font-size: 0.9em; font-weight: 600; margin-bottom: 10px; color: var(--blue); }
+.storage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
+.storage-item { padding: 8px; background: var(--bg); border-radius: 6px; }
+.storage-label { font-size: 0.7em; color: var(--text-dim); margin-bottom: 4px; }
+.storage-value { font-size: 0.75em; word-break: break-all; font-family: monospace; max-height: 60px; overflow: auto; }
+
+/* Bridge调用面板 */
+.bridge-panel { background: var(--card); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.bridge-title { font-size: 0.9em; font-weight: 600; margin-bottom: 10px; color: var(--orange); }
+.bridge-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.bridge-input { flex: 1; padding: 8px; border: 1px solid var(--card-hover); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.85em; font-family: monospace; }
+.bridge-btn { padding: 8px 16px; border: none; border-radius: 6px; background: var(--orange); color: #000; font-weight: 600; cursor: pointer; font-size: 0.85em; }
+.bridge-btn:hover { opacity: 0.9; }
+.bridge-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.preset-btn { padding: 6px 10px; border: none; border-radius: 4px; background: var(--bg); color: var(--text); font-size: 0.75em; cursor: pointer; }
+.preset-btn:hover { background: var(--card-hover); }
+.bridge-result { margin-top: 10px; padding: 8px; border-radius: 6px; font-size: 0.75em; font-family: monospace; white-space: pre-wrap; word-break: break-all; max-height: 150px; overflow: auto; background: var(--bg); display: none; }
+
+/* 评分面板 */
+.score-panel { background: var(--card); border-radius: 10px; padding: 12px; margin-bottom: 12px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+.score-circle { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8em; font-weight: bold; }
+.score-info h3 { margin: 0 0 4px; font-size: 0.95em; }
+.score-info p { margin: 0; font-size: 0.75em; color: var(--text-dim); }
+
+/* 统计 */
+.stats { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.stat-box { flex: 1; min-width: 55px; background: var(--card); padding: 8px 5px; border-radius: 8px; text-align: center; cursor: pointer; }
+.stat-box:hover { transform: scale(1.02); }
+.stat-box .count { font-size: 1.3em; font-weight: bold; display: block; }
+.stat-box .label { font-size: 0.65em; color: var(--text-dim); }
+.stat-box.high .count { color: var(--red); }
+.stat-box.medium .count { color: var(--yellow); }
+.stat-box.low .count { color: var(--green); }
+.stat-box.pending .count { color: var(--purple); }
+.stat-box.total .count { color: var(--blue); }
+
+/* 搜索 */
+.search-box { margin-bottom: 10px; display: flex; gap: 6px; }
+.search-input { flex: 1; padding: 10px; border: 2px solid var(--card); border-radius: 6px; background: var(--card); color: var(--text); font-size: 0.95em; outline: none; }
+.search-input:focus { border-color: var(--blue); }
+
+/* 工具栏 */
+.toolbar { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+.tool-btn { padding: 8px 12px; border: none; border-radius: 5px; background: var(--card); color: var(--text); font-size: 0.8em; cursor: pointer; }
+.tool-btn:hover { background: var(--card-hover); }
+.tool-btn.primary { background: var(--blue); color: #000; }
+
+/* 接口列表 */
+.results { margin-bottom: 15px; }
+.item { background: var(--card); border-radius: 8px; margin-bottom: 6px; overflow: hidden; border-left: 3px solid transparent; }
+.item.high { border-left-color: var(--red); }
+.item.medium { border-left-color: var(--yellow); }
+.item.low { border-left-color: var(--green); }
+.item.pending { border-left-color: var(--purple); }
+.item:hover { background: var(--card-hover); }
+
+.item-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.item-name { font-weight: 600; font-size: 0.92em; }
+.item-type { color: var(--text-dim); font-size: 0.65em; background: var(--bg); padding: 1px 4px; border-radius: 3px; margin-left: 4px; }
+.item-category { color: var(--blue); font-size: 0.65em; margin-left: 6px; }
+.item-right { display: flex; align-items: center; gap: 5px; }
+.risk-tag { padding: 2px 6px; border-radius: 10px; font-size: 0.6em; font-weight: bold; }
+.risk-tag.high { background: var(--red); color: #fff; }
+.risk-tag.medium { background: var(--yellow); color: #000; }
+.risk-tag.low { background: var(--green); color: #000; }
+.risk-tag.pending { background: var(--purple); color: #fff; }
+.arrow { font-size: 0.65em; color: var(--text-dim); transition: transform 0.2s; }
+.item.expanded .arrow { transform: rotate(180deg); }
+
+.item-body { display: none; padding: 0 10px 10px; border-top: 1px solid var(--card-hover); }
+.item.expanded .item-body { display: block; }
+
+.item-info { padding: 8px; background: rgba(0,212,255,0.08); border-radius: 6px; margin-bottom: 8px; font-size: 0.78em; }
+.item-info-title { color: var(--blue); font-weight: 600; margin-bottom: 3px; }
+.item-info-desc { color: var(--text-dim); }
+
+.method-list { max-height: 250px; overflow-y: auto; }
+.method-item { padding: 5px 6px; background: var(--bg); border-radius: 4px; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.method-type { font-size: 0.6em; padding: 1px 4px; border-radius: 3px; background: var(--purple); color: #fff; }
+.method-type.function { background: var(--blue); color: #000; }
+.method-name { font-family: monospace; font-size: 0.78em; }
+.method-category { font-size: 0.6em; color: var(--text-dim); }
+.method-btn { padding: 2px 6px; border: none; border-radius: 3px; font-size: 0.65em; cursor: pointer; background: var(--card-hover); color: var(--text); }
+.method-btn:hover { background: var(--blue); color: #000; }
+
+/* 调用面板 */
+.call-panel { margin-top: 8px; background: var(--bg); border-radius: 6px; padding: 8px; }
+.call-title { font-size: 0.8em; font-weight: 600; margin-bottom: 6px; color: var(--blue); }
+.call-row { display: flex; gap: 5px; margin-bottom: 6px; }
+.call-input { flex: 1; padding: 6px; border: 1px solid var(--card); border-radius: 4px; background: var(--card); color: var(--text); font-size: 0.78em; font-family: monospace; }
+.call-btn { padding: 6px 10px; border: none; border-radius: 4px; background: var(--blue); color: #000; font-weight: 600; cursor: pointer; font-size: 0.75em; }
+.call-result { margin-top: 6px; padding: 6px; border-radius: 4px; font-size: 0.7em; font-family: monospace; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow: auto; display: none; }
+.call-result.success { background: rgba(46,213,115,0.1); border-left: 2px solid var(--green); }
+.call-result.error { background: rgba(255,71,87,0.1); border-left: 2px solid var(--red); }
+.call-result.info { background: rgba(0,212,255,0.1); border-left: 2px solid var(--blue); }
+
+/* Modal */
+.modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 15px; }
+.modal.show { display: flex; }
+.modal-content { background: var(--card); border-radius: 10px; padding: 15px; max-width: 750px; width: 100%; max-height: 85vh; overflow: auto; }
+.modal-title { font-size: 1.05em; font-weight: 600; margin-bottom: 10px; }
+.modal-body { font-size: 0.72em; font-family: monospace; background: var(--bg); padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; max-height: 58vh; overflow: auto; }
+.modal-btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; margin-top: 6px; }
+.modal-btn.primary { background: var(--blue); color: #000; }
+.modal-btn.secondary { background: var(--card-hover); color: var(--text); }
+
+.toast { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); background: var(--card); color: var(--text); padding: 8px 16px; border-radius: 14px; font-size: 0.85em; z-index: 2000; opacity: 0; transition: opacity 0.3s; max-width: 90%; text-align: center; }
+.toast.show { opacity: 1; }
+.empty { text-align: center; color: var(--text-dim); padding: 20px; font-size: 0.9em; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
+<div class="container">
+<div class="header">
+ <h1>JSBridge Scanner</h1>
+ <p>存储信息 | Bridge调用 | 接口检测 | 风险评估 | 多格式导出</p>
+</div>
+
+<!-- 存储信息面板 -->
+<div class="storage-panel">
+ <div class="storage-title">📦 存储与环境信息</div>
+ <div class="storage-grid">
+  <div class="storage-item">
+   <div class="storage-label">Cookie</div>
+   <div class="storage-value" id="cookie-value">检测中...</div>
+  </div>
+  <div class="storage-item">
+   <div class="storage-label">LocalStorage</div>
+   <div class="storage-value" id="localstorage-value">检测中...</div>
+  </div>
+  <div class="storage-item">
+   <div class="storage-label">UserAgent</div>
+   <div class="storage-value" id="ua-value">检测中...</div>
+  </div>
+  <div class="storage-item">
+   <div class="storage-label">URL</div>
+   <div class="storage-value" id="url-value">检测中...</div>
+  </div>
+ </div>
+</div>
+
+<!-- Bridge快速调用 -->
+<div class="bridge-panel">
+ <div class="bridge-title">🔧 Bridge URL 快速调用</div>
+ <div class="bridge-row">
+  <input type="text" class="bridge-input" id="bridge-url" placeholder="输入 bridge URL，如: jsbridge://getUserInfo?{}">
+  <button class="bridge-btn" onclick="callBridgeUrl()">调用</button>
+ </div>
+ <div class="bridge-presets">
+  <button class="preset-btn" onclick="setBridgePreset('jsbridge://')">jsbridge://</button>
+  <button class="preset-btn" onclick="setBridgePreset('iosbridge://getUserInfo?{}')">iOS getUserInfo</button>
+  <button class="preset-btn" onclick="setBridgePreset('intent://')">intent://</button>
+  <button class="preset-btn" onclick="setBridgePreset('app://')">app://</button>
+ </div>
+ <div class="bridge-result" id="bridge-result"></div>
+</div>
+
+<!-- 评分面板 -->
+<div class="score-panel" id="score-panel"></div>
+
+<!-- 统计 -->
+<div class="stats" id="stats"></div>
+
+<!-- 搜索 -->
+<div class="search-box">
+ <input type="text" class="search-input" id="search" placeholder="搜索接口、方法或分类..." oninput="applySearch()">
+</div>
+
+<!-- 工具栏 -->
+<div class="toolbar">
+ <button class="tool-btn" onclick="expandAll()">展开全部</button>
+ <button class="tool-btn" onclick="collapseAll()">折叠全部</button>
+ <button class="tool-btn" onclick="exportJSON()">导出JSON</button>
+ <button class="tool-btn" onclick="exportCSV()">导出CSV</button>
+ <button class="tool-btn" onclick="exportReport()">导出报告</button>
+ <button class="tool-btn primary" onclick="location.reload()">重新扫描</button>
+</div>
+
+<div class="results" id="results"></div>
+</div>
+
+<!-- Modal -->
+<div class="modal" id="modal">
+<div class="modal-content">
+ <div class="modal-title" id="modal-title"></div>
+ <div class="modal-body" id="modal-body"></div>
+ <button class="modal-btn primary" onclick="copyModal()">复制</button>
+ <button class="modal-btn secondary" onclick="closeModal()">关闭</button>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+// ===================== 接口功能知识库 =====================
+const INTERFACE_KNOWLEDGE = {
+ exec: { category: "代码执行", desc: "可能执行任意代码", riskLevel: "high", cvss: 9.8, keywords: ["exec", "eval", "shell", "cmd", "execute", "runcommand", "searchBoxJavaBridge_", "accessibilityTraversal", "invoke", "runtime"] },
+ payment: { category: "支付", desc: "涉及支付操作", riskLevel: "high", cvss: 8.2, keywords: ["pay", "payment", "alipay", "wxpay", "tradepay", "dopay", "startpay", "wallet"] },
+ sms: { category: "短信", desc: "发送短信风险", riskLevel: "high", cvss: 8.5, keywords: ["sendsms", "sms", "sendsmessage", "smsmanager", "sendtext"] },
+ app: { category: "应用管理", desc: "安装/卸载应用", riskLevel: "high", cvss: 9.0, keywords: ["install", "installapp", "installapk", "uninstall", "launchapp", "openapp", "downloadapk"] },
+ contact: { category: "通讯录", desc: "访问通讯录", riskLevel: "high", cvss: 7.5, keywords: ["contact", "addressbook", "getcontacts", "contacts", "showaddressbook"] },
+ file: { category: "文件操作", desc: "读写文件", riskLevel: "high", cvss: 8.0, keywords: ["readfile", "writefile", "getfile", "savefile", "openfile", "downloadfile", "deletefile"] },
+ navigation: { category: "URL/导航", desc: "打开URL跳转", riskLevel: "high", cvss: 7.8, keywords: ["openurl", "loadurl", "openlink", "openweb", "startactivity", "openpage", "intent"] },
+ location: { category: "定位", desc: "获取GPS位置", riskLevel: "medium", cvss: 5.9, keywords: ["location", "getlocation", "geolocation", "gps", "position", "getposition"] },
+ device: { category: "设备信息", desc: "获取设备标识", riskLevel: "medium", cvss: 5.3, keywords: ["device", "deviceid", "imei", "imsi", "mac", "androidid", "uuid", "getdevice", "serial"] },
+ userinfo: { category: "用户信息", desc: "获取用户信息", riskLevel: "medium", cvss: 5.5, keywords: ["userinfo", "getuser", "userprofile", "getprofile", "account", "loginuser"] },
+ clipboard: { category: "剪贴板", desc: "读写剪贴板", riskLevel: "medium", cvss: 4.5, keywords: ["clipboard", "copy", "paste", "setclipboard", "getclipboard"] },
+ audio: { category: "音频", desc: "录音功能", riskLevel: "medium", cvss: 5.0, keywords: ["audio", "record", "voice", "microphone", "startrecord", "stoprecord"] },
+ network: { category: "网络请求", desc: "发起网络请求", riskLevel: "medium", cvss: 4.8, keywords: ["request", "fetch", "ajax", "http", "upload", "httprequest"] },
+ camera: { category: "相机/图片", desc: "调用摄像头", riskLevel: "low", cvss: 2.5, keywords: ["camera", "photo", "takephoto", "chooseimage", "selectimage", "openCamera"] },
+ album: { category: "相册", desc: "访问相册", riskLevel: "low", cvss: 2.0, keywords: ["album", "gallery", "picture", "saveimage", "previewimage"] },
+ notification: { category: "通知", desc: "发送通知", riskLevel: "low", cvss: 1.5, keywords: ["notification", "toast", "alert", "showtoast", "push"] },
+ share: { category: "分享", desc: "分享内容", riskLevel: "low", cvss: 1.0, keywords: ["share", "shareto", "sharelink", "socialshare"] },
+ scan: { category: "扫码", desc: "调用扫码", riskLevel: "low", cvss: 1.5, keywords: ["scan", "qrcode", "barcode", "scancode"] },
+ storage: { category: "存储", desc: "本地存储", riskLevel: "low", cvss: 2.0, keywords: ["storage", "localstorage", "setdata", "getdata", "savedata", "preference"] },
+ permission: { category: "权限", desc: "请求权限", riskLevel: "low", cvss: 1.0, keywords: ["permission", "requestpermission", "checkpermission", "requestauth"] },
+ biometric: { category: "生物识别", desc: "指纹/面容", riskLevel: "low", cvss: 0.5, keywords: ["fingerprint", "faceid", "touchid", "biometric"] },
+ bridge: { category: "JSBridge", desc: "通用桥接", riskLevel: "pending", cvss: 3.0, keywords: ["bridge", "jsbridge", "hybrid", "native", "callback", "postmessage"] }
+};
+
+// ===================== 初始化存储信息 =====================
+function initStorageInfo() {
+ try {
+  document.getElementById("cookie-value").textContent = document.cookie || "(空)";
+ } catch(e) {
+  document.getElementById("cookie-value").textContent = "(无法访问)";
+ }
+
+ try {
+  var lsKeys = Object.keys(localStorage);
+  document.getElementById("localstorage-value").textContent = lsKeys.length > 0 ? lsKeys.join(", ") : "(空)";
+ } catch(e) {
+  document.getElementById("localstorage-value").textContent = "(无法访问)";
+ }
+
+ document.getElementById("ua-value").textContent = navigator.userAgent.substring(0, 60) + "...";
+ document.getElementById("url-value").textContent = location.href.substring(0, 60) + (location.href.length > 60 ? "..." : "");
+}
+initStorageInfo();
+
+// ===================== Bridge URL 调用 =====================
+window.setBridgePreset = function(url) {
+ document.getElementById("bridge-url").value = url;
+};
+
+window.callBridgeUrl = function() {
+ var url = document.getElementById("bridge-url").value.trim();
+ if (!url) {
+  showToast("请输入 Bridge URL");
+  return;
+ }
+
+ var resultDiv = document.getElementById("bridge-result");
+ resultDiv.style.display = "block";
+ resultDiv.textContent = "调用中...";
+
+ try {
+  // 尝试通过 location.href 或 iframe 触发
+  if (url.startsWith("intent://") || url.startsWith("jsbridge://") || url.startsWith("iosbridge://")) {
+   var iframe = document.createElement("iframe");
+   iframe.style.display = "none";
+   iframe.src = url;
+   document.body.appendChild(iframe);
+   setTimeout(function() {
+    document.body.removeChild(iframe);
+   }, 1000);
+   resultDiv.textContent = "已触发 Bridge URL: " + url + "\n\n(注意: 部分 Bridge 需要原生端响应，结果可能在控制台或原生回调中查看)";
+  } else {
+   location.href = url;
+   resultDiv.textContent = "已跳转: " + url;
+  }
+ } catch(e) {
+  resultDiv.textContent = "调用失败: " + e.message;
+ }
+};
+
+// ===================== 基线检测 =====================
+function getInjectedProps() {
+ try {
+  var iframe = document.createElement("iframe");
+  iframe.style.display = "none";
+  document.body.appendChild(iframe);
+  var cleanWindow = iframe.contentWindow;
+  var current = Object.getOwnPropertyNames(window);
+  var clean = Object.getOwnPropertyNames(cleanWindow);
+  document.body.removeChild(iframe);
+  return current.filter(function(p) { return clean.indexOf(p) === -1; });
+ } catch(e) {
+  var baseline = ["postMessage","blur","focus","close","parent","opener","top","length","frames","closed","location","self","window","document","name","customElements","history","locationbar","menubar","personalbar","scrollbars","statusbar","toolbar","status","frameElement","navigator","origin","external","screen","innerWidth","innerHeight","scrollX","pageXOffset","scrollY","pageYOffset","visualViewport","screenX","screenY","outerWidth","outerHeight","devicePixelRatio","clientInformation","screenLeft","screenTop","defaultStatus","defaultstatus","styleMedia","isSecureContext","performance","stop","open","alert","confirm","prompt","print","queueMicrotask","requestAnimationFrame","cancelAnimationFrame","captureEvents","releaseEvents","requestIdleCallback","cancelIdleCallback","getComputedStyle","matchMedia","moveTo","moveBy","resizeTo","resizeBy","scroll","scrollTo","scrollBy","getSelection","find","webkitRequestAnimationFrame","webkitCancelAnimationFrame","fetch","btoa","atob","setTimeout","clearTimeout","setInterval","clearInterval","createImageBitmap","onappinstalled","onbeforeinstallprompt","crypto","ondevicemotion","ondeviceorientation","ondeviceorientationabsolute","indexedDB","webkitStorageInfo","sessionStorage","localStorage","orientation","onorientationchange","openDatabase","ontouchcancel","ontouchend","ontouchmove","ontouchstart","TEMPORARY","PERSISTENT","addEventListener","removeEventListener","dispatchEvent"];
+  var result = [];
+  for (var key in window) {
+   if (baseline.indexOf(key) === -1 && key.indexOf("on") !== 0 && key.indexOf("webkit") !== 0) {
+    result.push(key);
+   }
+  }
+  return result;
+ }
+}
+
+// ===================== JSBridge识别 =====================
+function isLikelyBridge(obj) {
+ if (!obj) return false;
+ try {
+  var type = typeof obj;
+  if (type === "function") return true;
+  if (type !== "object") return false;
+  var keys = Object.keys(obj);
+  if (keys.length === 0 || keys.length > 100) return false;
+  return keys.some(function(k) { return typeof obj[k] === "function"; });
+ } catch(e) {
+  return false;
+ }
+}
+
+// ===================== 接口识别 =====================
+function identifyInterface(name) {
+ var str = name.toLowerCase();
+ for (var key in INTERFACE_KNOWLEDGE) {
+  var info = INTERFACE_KNOWLEDGE[key];
+  for (var i = 0; i < info.keywords.length; i++) {
+   if (str.indexOf(info.keywords[i].toLowerCase()) !== -1) {
+    return { category: info.category, riskLevel: info.riskLevel, cvss: info.cvss, desc: info.desc, matchedKeyword: info.keywords[i] };
+   }
+  }
+ }
+ return null;
+}
+
+// ===================== CVSS评分 =====================
+function getCVSSSeverity(score) {
+ if (score >= 9) return { level: "critical", label: "严重", color: "var(--critical)" };
+ if (score >= 7) return { level: "high", label: "高危", color: "var(--red)" };
+ if (score >= 4) return { level: "medium", label: "中危", color: "var(--yellow)" };
+ if (score > 0) return { level: "low", label: "低危", color: "var(--green)" };
+ return { level: "none", label: "无风险", color: "var(--blue)" };
+}
+
+// ===================== 扫描执行 =====================
+var injectedProps = getInjectedProps();
+var scanResults = [];
+var totalCVSS = 0;
+
+for (var i = 0; i < injectedProps.length; i++) {
+ var key = injectedProps[i];
+ var obj = window[key];
+ var type = typeof obj;
+
+ if (!isLikelyBridge(obj)) continue;
+
+ var methods = [];
+ var objInfo = identifyInterface(key);
+ var maxRisk = objInfo ? objInfo.riskLevel : "pending";
+
+ if (obj && (type === "object" || type === "function")) {
+  for (var prop in obj) {
+   try {
+    var propType = typeof obj[prop];
+    var propInfo = identifyInterface(prop);
+    var propRisk = propInfo ? propInfo.riskLevel : "pending";
+
+    var levelOrder = { high: 0, medium: 1, low: 2, pending: 3 };
+    if (levelOrder[propRisk] < levelOrder[maxRisk]) maxRisk = propRisk;
+
+    methods.push({ name: prop, type: propType, risk: propRisk, interfaceInfo: propInfo });
+   } catch(e) {}
+  }
+ }
+
+ scanResults.push({ name: key, type: type, risk: maxRisk, methods: methods, interfaceInfo: objInfo });
+}
+
+// 排序
+var order = { high: 0, medium: 1, low: 2, pending: 3 };
+scanResults.sort(function(a, b) { return order[a.risk] - order[b.risk]; });
+
+// 计算总CVSS
+for (var i = 0; i < scanResults.length; i++) {
+ var item = scanResults[i];
+ if (item.interfaceInfo && item.interfaceInfo.cvss > totalCVSS) {
+  totalCVSS = item.interfaceInfo.cvss;
+ }
+ for (var j = 0; j < item.methods.length; j++) {
+  if (item.methods[j].interfaceInfo && item.methods[j].interfaceInfo.cvss > totalCVSS) {
+   totalCVSS = item.methods[j].interfaceInfo.cvss;
+  }
+ }
+}
+
+// 统计
+var counts = { high: 0, medium: 0, low: 0, pending: 0, total: scanResults.length };
+for (var i = 0; i < scanResults.length; i++) {
+ counts[scanResults[i].risk]++;
+}
+
+window.scanResults = scanResults;
+window.counts = counts;
+
+// ===================== 渲染评分面板 =====================
+var severity = getCVSSSeverity(totalCVSS);
+var safePercent = Math.max(0, 100 - totalCVSS * 10);
+document.getElementById("score-panel").innerHTML =
+ '<div class="score-circle" style="background: conic-gradient(' + severity.color + ' ' + (totalCVSS * 36) + 'deg, var(--card-hover) 0deg);">' + totalCVSS.toFixed(1) + '</div>' +
+ '<div class="score-info">' +
+  '<h3>CVSS 风险评分: ' + severity.label + '</h3>' +
+  '<p>检测到 ' + counts.total + ' 个接口，其中 ' + counts.high + ' 个高风险，' + counts.medium + ' 个中风险</p>' +
+  '<p>安全系数: ' + safePercent.toFixed(0) + '%</p>' +
+ '</div>';
+
+// ===================== 渲染统计 =====================
+document.getElementById("stats").innerHTML =
+ '<div class="stat-box total" onclick="filterByRisk(\'all\')"><span class="count">' + counts.total + '</span><span class="label">总计</span></div>' +
+ '<div class="stat-box high" onclick="filterByRisk(\'high\')"><span class="count">' + counts.high + '</span><span class="label">高危</span></div>' +
+ '<div class="stat-box medium" onclick="filterByRisk(\'medium\')"><span class="count">' + counts.medium + '</span><span class="label">中危</span></div>' +
+ '<div class="stat-box low" onclick="filterByRisk(\'low\')"><span class="count">' + counts.low + '</span><span class="label">低危</span></div>' +
+ '<div class="stat-box pending" onclick="filterByRisk(\'pending\')"><span class="count">' + counts.pending + '</span><span class="label">待确认</span></div>';
+
+// ===================== 渲染列表 =====================
+var currentFilter = "all";
+renderResults(currentFilter);
+
+function renderResults(filter) {
+ currentFilter = filter;
+ var list = filter === "all" ? scanResults.slice() : scanResults.filter(function(r) { return r.risk === filter; });
+
+ var search = document.getElementById("search").value.toLowerCase();
+ if (search) {
+  list = list.filter(function(r) {
+   return r.name.toLowerCase().indexOf(search) !== -1 ||
+    r.methods.some(function(m) { return m.name.toLowerCase().indexOf(search) !== -1; }) ||
+    (r.interfaceInfo && r.interfaceInfo.category.toLowerCase().indexOf(search) !== -1);
+  });
+ }
+
+ list.sort(function(a, b) { return order[a.risk] - order[b.risk]; });
+
+ var container = document.getElementById("results");
+ if (!list.length) {
+  container.innerHTML = '<div class="empty">没有找到匹配的接口</div>';
+  return;
+ }
+
+ var html = "";
+ for (var idx = 0; idx < list.length; idx++) {
+  var item = list[idx];
+  html += '<div class="item ' + item.risk + '" data-idx="' + idx + '">';
+  html += '<div class="item-header" onclick="toggleItem(' + idx + ')">';
+  html += '<div>';
+  html += '<span class="item-name">' + item.name + '</span>';
+  html += '<span class="item-type">' + item.type + '</span>';
+  if (item.interfaceInfo) {
+   html += '<span class="item-category">[' + item.interfaceInfo.category + ']</span>';
+  }
+  html += '</div>';
+  html += '<div class="item-right">';
+  html += '<span class="risk-tag ' + item.risk + '">' + item.risk.toUpperCase() + '</span>';
+  html += '<span class="arrow">▼</span>';
+  html += '</div></div>';
+  html += '<div class="item-body">';
+
+  if (item.interfaceInfo) {
+   html += '<div class="item-info">';
+   html += '<div class="item-info-title">📌 ' + item.interfaceInfo.category + ' (CVSS: ' + item.interfaceInfo.cvss + ')</div>';
+   html += '<div class="item-info-desc">' + item.interfaceInfo.desc + '</div>';
+   html += '</div>';
+  }
+
+  html += '<div class="method-list">';
+  for (var mIdx = 0; mIdx < item.methods.length; mIdx++) {
+   var m = item.methods[mIdx];
+   html += '<div class="method-item">';
+   html += '<span class="method-type' + (m.type === 'function' ? ' function' : '') + '">' + m.type + '</span>';
+   html += '<span class="method-name">' + m.name + '</span>';
+   if (m.interfaceInfo) {
+    html += '<span class="method-category">[' + m.interfaceInfo.category + ']</span>';
+   }
+   if (m.risk !== 'low' && m.risk !== 'pending') {
+    html += '<span class="risk-tag ' + m.risk + '">' + m.risk + '</span>';
+   }
+   html += '<button class="method-btn" onclick="copyText(\'' + item.name + '.' + m.name + '\')">复制</button>';
+   html += '</div>';
+  }
+  html += '</div>';
+
+  html += '<div class="call-panel">';
+  html += '<div class="call-title">🔧 调用测试</div>';
+  html += '<div class="call-row">';
+  html += '<input type="text" class="call-input" id="call-input-' + idx + '" placeholder="参数 (JSON或字符串)">';
+  html += '<button class="call-btn" onclick="tryCall(\'' + item.name + '\', ' + idx + ')">执行</button>';
+  html += '</div>';
+  html += '<div class="call-result" id="call-result-' + idx + '"></div>';
+  html += '</div>';
+
+  html += '</div></div>';
+ }
+ container.innerHTML = html;
+}
+
+window.renderResults = renderResults;
+
+window.filterByRisk = function(risk) {
+ document.getElementById("search").value = "";
+ renderResults(risk);
+};
+
+window.applySearch = function() {
+ renderResults(currentFilter);
+};
+
+window.toggleItem = function(idx) {
+ var item = document.querySelector('.item[data-idx="' + idx + '"]');
+ if (item) item.classList.toggle('expanded');
+};
+
+window.expandAll = function() {
+ var items = document.querySelectorAll('.item');
+ for (var i = 0; i < items.length; i++) {
+  items[i].classList.add('expanded');
+ }
+};
+
+window.collapseAll = function() {
+ var items = document.querySelectorAll('.item');
+ for (var i = 0; i < items.length; i++) {
+  items[i].classList.remove('expanded');
+ }
+};
+
+// ===================== 调用测试 =====================
+window.tryCall = function(objName, idx) {
+ var input = document.getElementById("call-input-" + idx);
+ var inputValue = input ? input.value : "";
+ var resultDiv = document.getElementById("call-result-" + idx);
+ resultDiv.style.display = "block";
+ resultDiv.className = "call-result info";
+ resultDiv.textContent = "执行中...";
+
+ setTimeout(function() {
+  try {
+   var obj = window[objName];
+   var type = typeof obj;
+
+   if (type === "function") {
+    var args = [];
+    if (inputValue.trim()) {
+     try { args = [JSON.parse(inputValue)]; } catch(e) { args = [inputValue]; }
+    }
+    var result = obj.apply(null, args);
+    resultDiv.className = "call-result success";
+    resultDiv.textContent = "✓ 成功\n返回: " + (JSON.stringify(result, null, 2) || String(result));
+   } else if (type === "object") {
+    resultDiv.className = "call-result info";
+    resultDiv.textContent = "对象信息:\n类型: " + type + "\n属性: " + Object.keys(obj).length + "个\n" + JSON.stringify(obj, null, 2).substring(0, 300);
+   } else {
+    resultDiv.className = "call-result success";
+    resultDiv.textContent = "值: " + String(obj);
+   }
+  } catch(err) {
+   resultDiv.className = "call-result error";
+   resultDiv.textContent = "✗ 失败: " + err.message;
+  }
+ }, 50);
+};
+
+window.copyText = function(text) {
+ if (navigator.clipboard) {
+  navigator.clipboard.writeText(text).then(function() { showToast("已复制: " + text); });
+ } else {
+  var ta = document.createElement("textarea");
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  document.body.removeChild(ta);
+  showToast("已复制: " + text);
+ }
+};
+
+// ===================== 导出 =====================
+window.exportJSON = function() {
+ var data = {
+  scanTime: new Date().toISOString(),
+  url: location.href,
+  userAgent: navigator.userAgent,
+  cvssScore: totalCVSS,
+  summary: counts,
+  interfaces: scanResults
+ };
+ showModal("导出JSON", JSON.stringify(data, null, 2));
+};
+
+window.exportCSV = function() {
+ var csv = "接口名,类型,风险等级,分类,CVSS评分,方法数,方法列表\n";
+ for (var i = 0; i < scanResults.length; i++) {
+  var item = scanResults[i];
+  var methods = item.methods.map(function(m) { return m.name; }).join("; ");
+  csv += '"' + item.name + '","' + item.type + '","' + item.risk + '","' + (item.interfaceInfo ? item.interfaceInfo.category : "") + '",' + (item.interfaceInfo ? item.interfaceInfo.cvss : 0) + ',' + item.methods.length + ',"' + methods + '"\n';
+ }
+ showModal("导出CSV", csv);
+};
+
+window.exportReport = function() {
+ var severity = getCVSSSeverity(totalCVSS);
+ var md = "# JSBridge 安全检测报告\n\n";
+ md += "**扫描时间:** " + new Date().toLocaleString() + "\n";
+ md += "**页面:** " + location.href + "\n";
+ md += "**CVSS评分:** " + totalCVSS.toFixed(1) + " (" + severity.label + ")\n\n";
+ md += "## 统计\n\n";
+ md += "| 等级 | 数量 |\n|------|------|\n";
+ md += "| 高危 | " + counts.high + " |\n";
+ md += "| 中危 | " + counts.medium + " |\n";
+ md += "| 低危 | " + counts.low + " |\n";
+ md += "| 待确认 | " + counts.pending + " |\n";
+ md += "| **总计** | **" + counts.total + "** |\n\n";
+ md += "## 接口详情\n\n";
+ for (var i = 0; i < scanResults.length; i++) {
+  var item = scanResults[i];
+  md += "### " + item.name + " [" + item.risk.toUpperCase() + "]\n";
+  if (item.interfaceInfo) {
+   md += "- 分类: " + item.interfaceInfo.category + "\n";
+   md += "- CVSS: " + item.interfaceInfo.cvss + "\n";
+   md += "- 说明: " + item.interfaceInfo.desc + "\n";
+  }
+  md += "- 方法数: " + item.methods.length + "\n";
+  for (var j = 0; j < item.methods.length; j++) {
+   var m = item.methods[j];
+   md += "  - " + m.name + " (" + m.type + ")" + (m.interfaceInfo ? " [" + m.interfaceInfo.category + "]" : "") + "\n";
+  }
+  md += "\n";
+ }
+ showModal("导出报告", md);
+};
+
+window.showModal = function(title, content) {
+ document.getElementById("modal-title").textContent = title;
+ document.getElementById("modal-body").textContent = content;
+ document.getElementById("modal").classList.add("show");
+};
+
+window.closeModal = function() {
+ document.getElementById("modal").classList.remove("show");
+};
+
+window.copyModal = function() {
+ var text = document.getElementById("modal-body").textContent;
+ if (navigator.clipboard) {
+  navigator.clipboard.writeText(text).then(function() { showToast("已复制"); });
+ } else {
+  var ta = document.createElement("textarea");
+  ta.value = text;
+  document.body.appendChild(ta);
+  ta.select();
+  document.execCommand("copy");
+  document.body.removeChild(ta);
+  showToast("已复制");
+ }
+};
+
+// ===================== 主题切换 =====================
+window.toggleTheme = function() {
+ var html = document.documentElement;
+ var current = html.getAttribute("data-theme");
+ if (current === "light") {
+  html.setAttribute("data-theme", "dark");
+  localStorage.setItem("jsbridge-theme", "dark");
+ } else {
+  html.setAttribute("data-theme", "light");
+  localStorage.setItem("jsbridge-theme", "light");
+ }
+};
+
+var savedTheme = localStorage.getItem("jsbridge-theme");
+if (savedTheme) {
+ document.documentElement.setAttribute("data-theme", savedTheme);
+}
+
+// ===================== Toast =====================
+function showToast(msg) {
+ var toast = document.getElementById("toast");
+ toast.textContent = msg;
+ toast.classList.add("show");
+ setTimeout(function() { toast.classList.remove("show"); }, 1500);
+}
+
+// ===================== 扫描完成 =====================
+setTimeout(function() {
+ var msg = "扫描完成!\n\n";
+ msg += "接口统计:\n";
+ msg += "- 高危: " + counts.high + "\n";
+ msg += "- 中危: " + counts.medium + "\n";
+ msg += "- 低危: " + counts.low + "\n";
+ msg += "- 待确认: " + counts.pending + "\n";
+ msg += "- 总计: " + counts.total + "\n\n";
+ msg += "CVSS评分: " + totalCVSS.toFixed(1) + " (" + severity.label + ")";
+ alert(msg);
+}, 100);
+
+})();
+</script>
+</body>
+</html>
