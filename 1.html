@@ -2,68 +2,88 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Ultimate JSBridge Penetration Lab</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Ultimate JSBridge Lab</title>
 <style>
     :root {
         --bg: #0a0a10; --card: #13131f; --card-hover: #1c1c2e; --border: #2d2d44;
         --text: #e0e0e0; --text-dim: #8a8a9f;
         --blue: #00e5ff; --red: #ff3366; --yellow: #ffc107; --green: #00e676;
         --purple: #d500f9; --orange: #ff9100;
-        --font-base: 13px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: var(--bg); color: var(--text); font-size: var(--font-base); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-    
-    /* 顶部信息栏 */
-    .header { background: var(--card); padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-    .header h1 { font-size: 1.3em; color: var(--blue); text-shadow: 0 0 10px rgba(0,229,255,0.3); margin-bottom: 4px; }
-    .header-info { font-size: 0.8em; color: var(--text-dim); }
-    .stats-row { display: flex; gap: 15px; }
-    .stat-badge { padding: 4px 10px; border-radius: 4px; font-weight: bold; background: var(--bg); border: 1px solid var(--border); }
-    
-    /* 主体三栏布局 */
-    .workspace { display: flex; flex: 1; overflow: hidden; }
-    .panel { display: flex; flex-direction: column; background: var(--bg); border-right: 1px solid var(--border); }
-    .panel-title { background: var(--card); padding: 10px 15px; font-weight: bold; color: var(--text); border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
-    .panel-content { flex: 1; overflow-y: auto; padding: 15px; }
-    
-    /* 按钮与输入框 */
-    .btn { padding: 6px 12px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; cursor: pointer; transition: all 0.2s; font-size: 0.9em; font-family: monospace; }
-    .btn:hover { background: var(--card-hover); border-color: var(--blue); }
+    [data-theme="light"] {
+        --bg: #f0f2f5; --card: #ffffff; --card-hover: #f8f9fa; --border: #dcdfe6;
+        --text: #2c3e50; --text-dim: #7f8c8d;
+        --blue: #0984e3; --red: #e74c3c; --yellow: #f39c12; --green: #27ae60;
+        --purple: #8e44ad; --orange: #d35400;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: var(--bg); color: var(--text); font-size: 13px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* 头部 */
+    .header { background: var(--card); padding: env(safe-area-inset-top) 15px 10px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; flex-wrap: wrap; gap: 8px;}
+    .header h1 { font-size: 16px; color: var(--blue); text-shadow: 0 0 10px rgba(0,229,255,0.3); }
+    .bridge-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid var(--border); background: var(--bg); color: var(--text-dim); }
+    .btn { padding: 6px 12px; border-radius: 4px; font-size: 12px; font-weight: bold; border: 1px solid var(--border); background: var(--bg); color: var(--text); cursor: pointer; transition: 0.1s; }
+    .btn:active { transform: scale(0.95); }
     .btn.primary { background: rgba(0, 229, 255, 0.1); border-color: var(--blue); color: var(--blue); }
     .btn.danger { background: rgba(255, 51, 102, 0.1); border-color: var(--red); color: var(--red); }
-    .input-base { width: 100%; padding: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; font-family: monospace; margin-bottom: 10px; outline: none; }
+    .btn.warn { background: rgba(255, 193, 7, 0.1); border-color: var(--yellow); color: var(--yellow); }
+
+    /* 移动端 Tab 栏 (仅移动端显示) */
+    .tabs { display: none; background: var(--card); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab { flex: 1; text-align: center; padding: 12px 0; font-size: 14px; font-weight: bold; color: var(--text-dim); border-bottom: 2px solid transparent; }
+    .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+    /* 三栏布局 */
+    .workspace { display: flex; flex: 1; overflow: hidden; }
+    .panel { display: flex; flex-direction: column; background: var(--bg); border-right: 1px solid var(--border); }
+    .panel:last-child { border-right: none; }
+    .panel-title { background: var(--card); padding: 8px 12px; font-weight: bold; color: var(--text); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 12px;}
+    .panel-body { flex: 1; overflow-y: auto; padding: 10px; }
+
+    /* 左侧：对象列表 */
+    .search-box { width: 100%; padding: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; outline: none; margin-bottom: 10px; font-family: monospace;}
+    .obj-item { padding: 8px 10px; background: var(--card); border: 1px solid var(--border); border-radius: 4px; margin-bottom: 6px; cursor: pointer; border-left: 3px solid transparent; display: flex; justify-content: space-between; align-items: center; }
+    .obj-item.active { border-left-color: var(--blue); background: var(--card-hover); }
+    .obj-name { font-family: monospace; font-weight: bold; font-size: 14px; word-break: break-all; }
+    .tag { padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: bold; color: #fff; }
+    .t-crit { background: var(--red); } .t-high { background: var(--orange); } .t-med { background: var(--yellow); color: #000;} .t-low { background: var(--green); color: #000;} .t-none { background: var(--border); }
+
+    /* 中间：递归树结构 (还原 scanner2 的精髓) */
+    .tree-item { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 13px; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,0.02);}
+    .tree-toggle { width: 16px; cursor: pointer; color: var(--text-dim); text-align: center; }
+    .tree-key { font-family: monospace; cursor: pointer; font-weight: bold; }
+    .tree-key.function { color: var(--blue); }
+    .tree-key.object { color: var(--green); }
+    .tree-type { font-size: 10px; color: var(--text-dim); background: var(--card); padding: 1px 4px; border-radius: 2px; }
+    .tree-val { color: var(--text-dim); word-break: break-all; max-width: 200px;}
+    .tree-children { margin-left: 18px; display: none; border-left: 1px dashed var(--border); padding-left: 6px;}
+    .tree-children.show { display: block; }
+
+    /* 右侧：终端调用器 */
+    .input-base { width: 100%; padding: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; font-family: monospace; outline: none; margin-bottom: 8px; }
     .input-base:focus { border-color: var(--blue); }
-
-    /* 列表与树状图 */
-    .list-item { padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
-    .list-item:hover, .list-item.active { border-color: var(--blue); background: var(--card-hover); }
-    .risk-tag { padding: 2px 6px; border-radius: 3px; font-size: 0.7em; font-weight: bold; margin-left: 6px; color: #fff; }
-    .r-crit { background: var(--red); } .r-high { background: var(--orange); } .r-med { background: var(--yellow); color: #000; } .r-low { background: var(--green); color: #000; } .r-none { background: var(--border); }
+    .control-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .checkbox-lbl { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; cursor: pointer; }
     
-    /* 树形组件 */
-    .tree-node { margin-bottom: 4px; }
-    .tree-header { display: flex; align-items: center; padding: 4px; border-radius: 4px; cursor: pointer; }
-    .tree-header:hover { background: var(--card); }
-    .tree-icon { width: 16px; color: var(--text-dim); }
-    .tree-key { color: var(--blue); font-weight: bold; margin-right: 8px; }
-    .tree-val { color: var(--text-dim); font-size: 0.9em; }
-    .action-btn { font-size: 0.7em; padding: 2px 6px; margin-left: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--text); cursor: pointer; }
-    .action-btn:hover { background: var(--blue); color: #000; }
-
-    /* 终端日志 */
-    .terminal { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; flex: 1; overflow-y: auto; font-family: "Courier New", Courier, monospace; font-size: 0.9em; margin-bottom: 10px; display: flex; flex-direction: column; }
+    .terminal { background: #000; border: 1px solid var(--border); border-radius: 4px; padding: 10px; height: 180px; overflow-y: auto; font-family: "Courier New", monospace; font-size: 11px; margin-bottom: 10px; }
     .log-line { margin-bottom: 4px; word-break: break-all; }
-    .log-time { color: var(--text-dim); margin-right: 8px; }
-    .log-info { color: var(--green); } .log-warn { color: var(--yellow); } .log-err { color: var(--red); } .log-hook { color: var(--purple); }
+    .c-time { color: var(--text-dim); margin-right: 5px; }
+    .c-ok { color: var(--green); } .c-err { color: var(--red); } .c-sys { color: var(--blue); } .c-warn { color: var(--yellow); }
 
-    /* 弹窗 */
-    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-    .modal-content { background: var(--card); border: 1px solid var(--border); border-radius: 8px; width: 100%; max-width: 800px; max-height: 80vh; display: flex; flex-direction: column; }
-    .modal-body { padding: 15px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; font-size: 0.9em; }
+    /* 报告弹窗 */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 100; padding: env(safe-area-inset-top) 15px 15px; flex-direction: column;}
+    .modal-content { background: var(--card); border: 1px solid var(--border); border-radius: 8px; flex: 1; display: flex; flex-direction: column; overflow: hidden; max-width: 800px; margin: 0 auto; width: 100%;}
+    .modal-body { flex: 1; padding: 15px; overflow-y: auto; font-family: monospace; font-size: 12px; white-space: pre-wrap; -webkit-user-select: text; user-select: text; }
 
-    @media (max-width: 900px) { .workspace { flex-direction: column; overflow-y: auto; } .panel { border-right: none; border-bottom: 1px solid var(--border); min-height: 400px; flex: none; } }
+    /* 移动端响应式布局 */
+    @media (max-width: 900px) {
+        .tabs { display: flex; }
+        .workspace { flex-direction: column; overflow-y: auto; }
+        .panel { width: 100% !important; border-right: none; display: none; flex: none; height: calc(100vh - 120px); }
+        .panel.active { display: flex; }
+    }
 </style>
 </head>
 <body>
@@ -71,457 +91,523 @@
 <div class="header">
     <div>
         <h1>🛡️ Ultimate JSBridge Lab</h1>
-        <div class="header-info" id="env-info">探测中...</div>
+        <div style="font-size: 10px; color: var(--text-dim);" id="ua-text">加载中...</div>
     </div>
-    <div class="stats-row">
-        <div class="stat-badge" style="color:var(--blue)">原生对象: <span id="stat-total">0</span></div>
-        <div class="stat-badge" style="color:var(--red)">高危漏洞: <span id="stat-high">0</span></div>
-        <button class="btn primary" onclick="exportMarkdown()">📄 导出渗透报告</button>
+    <div style="display: flex; gap: 8px; align-items: center;">
+        <span class="bridge-badge" id="bridge-badge">环境识别中</span>
+        <button class="btn" onclick="toggleTheme()">🌓</button>
+        <button class="btn primary" onclick="__WVS__.export()">[P2] 导出报告</button>
     </div>
 </div>
 
+<div class="tabs" id="mobile-tabs">
+    <div class="tab active" onclick="switchTab(0, this)">📦 对象池</div>
+    <div class="tab" onclick="switchTab(1, this)">🌳 深度解析</div>
+    <div class="tab" onclick="switchTab(2, this)">📡 终端调试</div>
+</div>
+
 <div class="workspace">
-    <div class="panel" style="width: 320px; flex-shrink: 0;">
+    <div class="panel active" style="width: 300px; flex-shrink: 0;">
         <div class="panel-title">
-            <span>📦 注入对象池</span>
-            <button class="btn" style="padding: 2px 6px; font-size: 0.8em;" onclick="location.reload()">强制刷新</button>
+            <span>📦 对象池 (<span id="obj-count">0</span>)</span>
+            <button class="btn" style="padding: 2px 6px;" onclick="__WVS__.scan()">🔄 扫描</button>
         </div>
-        <div class="panel-content" style="display: flex; flex-direction: column;">
-            <div id="object-list" style="flex: 1; overflow-y: auto; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px;"></div>
+        <div class="panel-body" style="display: flex; flex-direction: column; padding: 10px;">
+            <input type="text" class="search-box" id="search-input" placeholder="搜索对象..." oninput="__WVS__.filter()">
+            <div id="obj-list" style="flex: 1; overflow-y: auto; margin-bottom: 10px; border-bottom: 1px solid var(--border);"></div>
             
-            <div style="flex-shrink: 0;">
-                <h3 style="color:var(--red); font-size:1em; margin-bottom:10px;">🔥 字典爆破 (Brute Force)</h3>
-                <select id="brute-target" class="input-base"></select>
-                <button class="btn danger" style="width: 100%;" id="btn-brute" onclick="startBruteForce()">💀 开始隐蔽方法撞库</button>
-                <div id="brute-progress" style="margin-top:8px; font-size:0.8em; color:var(--text-dim);">需选中上方列表中的无方法对象进行撞库。</div>
+            <div style="flex-shrink: 0; background: var(--card); padding: 10px; border-radius: 6px; border: 1px solid var(--border);">
+                <div style="color:var(--red); font-weight:bold; margin-bottom:6px;">🔥 字典爆破 (P1)</div>
+                <div class="control-row">
+                    <select id="brute-target" class="input-base" style="margin-bottom:0; flex: 1;"></select>
+                    <button class="btn danger" id="btn-brute" onclick="__WVS__.brute()">START</button>
+                </div>
+                <div id="brute-log" style="font-size:11px; color:var(--text-dim); text-align:center; margin-top:4px;">使用 in 操作符安全探测隐藏方法</div>
             </div>
         </div>
     </div>
 
     <div class="panel" style="flex: 1;">
         <div class="panel-title">
-            <span>🌳 深度分析与方法调用</span>
-            <button class="btn primary" id="btn-hook" onclick="toggleGlobalHook()">🎣 开启全局 API Hook</button>
+            <span id="tree-title">🌳 对象深度分析</span>
+            <div style="display:flex; gap:6px;">
+                <button class="btn" style="padding: 2px 6px;" onclick="expandAll()">展开</button>
+                <button class="btn" style="padding: 2px 6px;" onclick="collapseAll()">折叠</button>
+            </div>
         </div>
-        <div class="panel-content" id="tree-container">
-            <div style="color:var(--text-dim); text-align:center; margin-top:50px;">👈 请先在左侧选择一个原生对象</div>
+        <div class="panel-body" id="tree-body">
+            <div style="text-align:center; padding: 40px; color: var(--text-dim);">请在左侧列表选择一个对象</div>
         </div>
     </div>
 
     <div class="panel" style="width: 350px; flex-shrink: 0;">
-        <div class="panel-title"><span>📡 渗透监控终端 (Terminal)</span></div>
-        <div class="panel-content" style="display: flex; flex-direction: column;">
-            
-            <div class="terminal" id="terminal-log"></div>
+        <div class="panel-title">
+            <span>📡 渗透监控终端</span>
+            <button class="btn danger" style="padding: 2px 6px;" id="btn-hook" onclick="__WVS__.hook()">[P3] 开启全局 Hook</button>
+        </div>
+        <div class="panel-body" style="display: flex; flex-direction: column;">
+            <div class="terminal" id="term-box"></div>
             
             <div style="flex-shrink: 0;">
-                <input type="text" id="exec-path" class="input-base" style="color:var(--green); font-weight:bold;" placeholder="目标路径 (如 window.obj.func)">
-                <input type="text" id="exec-params" class="input-base" placeholder='输入参数 (如: {"key":"val"} 或 "123")'>
-                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-                    <button class="btn primary" style="flex: 1;" onclick="executeCommand()">⚡ 模拟调用</button>
-                    <button class="btn" style="flex: 1;" onclick="testDeeplink()">🔗 盲发 Deeplink</button>
+                <input type="text" id="exec-path" class="input-base" style="color:var(--green); font-weight:bold;" placeholder="执行路径 (如: window.obj.func)">
+                
+                <div class="control-row">
+                    <select id="call-mode" class="input-base" style="margin-bottom:0; flex:1;" onchange="__WVS__.changeMode()">
+                        <option value="json">JSON</option>
+                        <option value="string">String</option>
+                        <option value="manual">Manual</option>
+                        <option value="multi">Multi Array</option>
+                    </select>
+                    <label class="checkbox-lbl" title="自动生成 _cb_ 时间戳函数接收异步结果">
+                        <input type="checkbox" id="use-cb"> Callback
+                    </label>
+                </div>
+                
+                <input type="text" id="exec-params" class="input-base" placeholder='参数: {"data":1}'>
+                
+                <div class="control-row">
+                    <button class="btn primary" style="flex: 2;" onclick="__WVS__.execute()">⚡ 发送 Call</button>
+                    <button class="btn warn" style="flex: 1;" onclick="__WVS__.fuzz()">🧪 Fuzz</button>
+                    <button class="btn" style="flex: 1;" onclick="__WVS__.deeplink()">🔗 Deeplink</button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
-<div class="modal" id="report-modal">
+<div class="modal" id="md-modal">
     <div class="modal-content">
-        <div style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items:center;">
-            <h2 style="color:var(--blue);margin:0;">渗透测试报告 (Markdown)</h2>
-            <div>
-                <button class="btn primary" onclick="copyReport()">复制内容</button>
-                <button class="btn" onclick="document.getElementById('report-modal').style.display='none'">关闭</button>
+        <div style="padding: 12px 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items:center;">
+            <h3 style="color:var(--blue);">渗透报告 (Markdown)</h3>
+            <div style="display:flex; gap:8px;">
+                <button class="btn primary" onclick="__WVS__.copyReport()">复制内容</button>
+                <button class="btn" onclick="document.getElementById('md-modal').style.display='none'">关闭</button>
             </div>
         </div>
-        <div class="modal-body" id="report-body"></div>
+        <div class="modal-body" id="md-body"></div>
     </div>
 </div>
 
 <script>
-// ==============================================================================
-// 核心隔离闭包：保证引擎自身的变量绝对不污染全局 window，杜绝“自己扫自己”
-// ==============================================================================
-(function() {
+// 移动端 Tab 切换逻辑
+function switchTab(index, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    const panels = document.querySelectorAll('.workspace > .panel');
+    panels.forEach(p => p.classList.remove('active'));
+    if(panels[index]) panels[index].classList.add('active');
+}
+function expandAll() { document.querySelectorAll('.tree-children').forEach(el => el.classList.add('show')); document.querySelectorAll('.tree-toggle').forEach(el => el.innerText = '▼'); }
+function collapseAll() { document.querySelectorAll('.tree-children').forEach(el => el.classList.remove('show')); document.querySelectorAll('.tree-toggle').forEach(el => el.innerText = '▶'); }
+function toggleTheme() { const h = document.documentElement; h.setAttribute("data-theme", h.getAttribute("data-theme") === "light" ? "dark" : "light"); }
+
+window.__WVS__ = (function() {
+    // 黑名单，保护扫描器自身
+    const INTERNAL_KEYS = ["switchTab", "expandAll", "collapseAll", "toggleTheme", "__WVS__"];
+    const IGNORES = ["apply", "bind", "call", "toString", "length", "name", "prototype", "constructor", "caller", "callee"];
     
-    // 【核心修复】第 0 毫秒的绝对纯净快照！
-    // 此时任何自身的 UI 工具函数（如 window.executeCommand）都还没有挂载！
-    const PURE_INJECTED_KEYS = (function() {
+    const KNOWLEDGE = [
+        { kw: ["exec","eval","shell","system"], cat: "命令执行", r: "t-crit", desc: "可执行系统级命令" },
+        { kw: ["pay","alipay","wxpay"], cat: "支付接口", r: "t-crit", desc: "拉起支付结算链路" },
+        { kw: ["contact","addressbook"], cat: "通讯录", r: "t-high", desc: "获取用户隐私通讯录" },
+        { kw: ["file","readfile","openurl"], cat: "文件/越权", r: "t-high", desc: "读取文件或打开跨域URL" },
+        { kw: ["login","token","auth"], cat: "凭证操作", r: "t-high", desc: "操作用户登录凭证" },
+        { kw: ["intent","startactivity"], cat: "组件逃逸", r: "t-high", desc: "拉起App内部原生组件" },
+        { kw: ["deviceid","imei","mac"], cat: "设备指纹", r: "t-med", desc: "获取设备唯一识别码" },
+        { kw: ["location","gps"], cat: "物理定位", r: "t-med", desc: "获取真实GPS坐标" }
+    ];
+    
+    const BRUTE_DICT = ["getUserInfo","getDeviceId","getToken","pay","getLocation","read","write","download","openUrl","startActivity","getContacts","invoke","execute","call","postMessage","showAddressBook","scanQRCode","closeWindow","setupWebViewJavascriptBridge"];
+    const FUZZ_PARAMS = ["", "test", "123", "{}", "[]", "null", "undefined", '{"a":1}', '["a","b"]', "../../../etc/passwd"];
+
+    let scanData = [];
+    let isHooked = false;
+    const termBox = document.getElementById('term-box');
+
+    function log(msg, type = 'c-sys') {
+        const time = new Date().toLocaleTimeString().split(' ')[0];
+        const line = document.createElement('div');
+        line.className = `log-line ${type}`;
+        line.innerHTML = `<span class="c-time">[${time}]</span>${msg}`;
+        termBox.appendChild(line);
+        termBox.scrollTop = termBox.scrollHeight;
+    }
+    
+    function safeStr(obj) { try { return typeof obj === 'object' && obj !== null ? JSON.stringify(obj) : String(obj); } catch(e) { return "[Object]"; } }
+    
+    function evalRisk(name) {
+        const s = name.toLowerCase();
+        for(let r of KNOWLEDGE) { if(r.kw.some(k => s.includes(k))) return r; }
+        return { cat: "常规接口", r: "t-none", desc: "自定义业务属性" };
+    }
+
+    // [恢复 scanner2 精髓] 框架指纹识别
+    function detectBridge() {
+        let type = "Android (Unknown)";
+        if(window.webkit && window.webkit.messageHandlers) type = "iOS WKWebView";
+        else if(window.WebViewJavascriptBridge || window.JsBridge) type = "JsBridge Framework";
+        else if(window.cordova) type = "Cordova / PhoneGap";
+        else if(window.ReactNativeWebView) type = "React Native";
+        
+        document.getElementById('bridge-badge').innerText = type;
+        log(`环境识别: ${type}`);
+    }
+
+    // [P0] 准确发现：Iframe 白名单 + iOS 特殊通道
+    function scan() {
+        let keys = [];
         try {
             const iframe = document.createElement("iframe");
             iframe.style.display = "none";
-            document.documentElement.appendChild(iframe);
-            const cleanKeys = Object.getOwnPropertyNames(iframe.contentWindow);
-            const currKeys = Object.getOwnPropertyNames(window);
-            iframe.parentNode.removeChild(iframe);
-            return currKeys.filter(k => !cleanKeys.includes(k) && !k.startsWith("webkit") && !k.startsWith("on"));
+            document.body.appendChild(iframe);
+            const clean = Object.getOwnPropertyNames(iframe.contentWindow);
+            const curr = Object.getOwnPropertyNames(window);
+            iframe.remove();
+            keys = curr.filter(k => !clean.includes(k) && !k.startsWith("on") && !INTERNAL_KEYS.includes(k));
         } catch(e) {
-            return Object.keys(window).filter(k => !["window","document","location","navigator","localStorage","sessionStorage","console"].includes(k));
+            keys = Object.keys(window).filter(k => !["window","document","location","navigator","localStorage","sessionStorage","console"].includes(k) && !INTERNAL_KEYS.includes(k));
         }
-    })();
 
-    // 初始化 UI 日志
-    const terminal = document.getElementById('terminal-log');
-    function log(msg, type = 'info') {
-        const time = new Date().toLocaleTimeString();
-        let colorClass = 'log-info';
-        if(type === 'warn') colorClass = 'log-warn';
-        if(type === 'err') colorClass = 'log-err';
-        if(type === 'hook') colorClass = 'log-hook';
-        const line = document.createElement('div');
-        line.className = `log-line ${colorClass}`;
-        line.innerHTML = `<span class="log-time">[${time}]</span> ${msg}`;
-        terminal.appendChild(line);
-        terminal.scrollTop = terminal.scrollHeight;
-    }
+        scanData = [];
+        let tCount = 0;
 
-    document.getElementById('env-info').innerText = navigator.userAgent;
-    log(`环境沙箱加载完毕: ${PURE_INJECTED_KEYS.length} 个非原生对象被捕获。`);
-
-    // --- 漏洞与特征知识库 ---
-    const KNOWLEDGE = {
-        "exec": { cat: "命令执行", kw: ["exec", "eval", "shell", "invoke", "runtime", "system"], r: "r-crit", desc: "可能执行系统命令" },
-        "app": { cat: "应用控制", kw: ["install", "uninstall", "downloadapk", "openapp"], r: "r-crit", desc: "静默安装或拉起恶意应用" },
-        "pay": { cat: "支付越权", kw: ["pay", "alipay", "wxpay", "wallet"], r: "r-crit", desc: "未授权拉起支付结算" },
-        "contact": { cat: "隐私窃取", kw: ["contact", "addressbook", "showaddressbook"], r: "r-high", desc: "获取用户敏感通讯录数据" },
-        "file": { cat: "文件跨域", kw: ["readfile", "writefile", "openfile"], r: "r-high", desc: "读取App私有目录" },
-        "auth": { cat: "认证劫持", kw: ["login", "oauth", "token", "signin", "auth"], r: "r-high", desc: "获取或伪造登录凭证" },
-        "intent": { cat: "路由逃逸", kw: ["startactivity", "intent", "jumppagepath", "openurl"], r: "r-high", desc: "越权拉起原生组件或URL" },
-        "device": { cat: "指纹追踪", kw: ["deviceid", "imei", "mac", "serial"], r: "r-med", desc: "获取设备硬件唯一标识" },
-        "storage": { cat: "数据操作", kw: ["storage", "put", "getdata", "setdata"], r: "r-med", desc: "操作本地持久化缓存" },
-        "location": { cat: "物理定位", kw: ["location", "gps", "position"], r: "r-med", desc: "获取真实物理坐标" },
-        "media": { cat: "媒体硬件", kw: ["camera", "photo", "audio", "record", "speechrecognition"], r: "r-low", desc: "调用摄像头、麦克风等外设" },
-        "ui": { cat: "UI交互", kw: ["toast", "alert", "navigation", "airportinterest", "policy"], r: "r-low", desc: "正常的界面展示或提示" }
-    };
-
-    function evalRisk(name) {
-        const str = name.toLowerCase();
-        for (let key in KNOWLEDGE) {
-            if (KNOWLEDGE[key].kw.some(kw => str.includes(kw))) return KNOWLEDGE[key];
+        // 1. iOS 解析
+        if (window.webkit && window.webkit.messageHandlers) {
+            Object.keys(window.webkit.messageHandlers).forEach(h => {
+                scanData.push({ name: `webkit.messageHandlers.${h}`, objRef: window.webkit.messageHandlers[h], info: evalRisk(h) });
+                tCount++;
+            });
         }
-        return { cat: "未分类自定义方法", r: "r-none", desc: "需人工确认功能" };
-    }
-
-    // --- 隐秘方法爆破字典 (应对无暴露方法的 Java 对象) ---
-    const BRUTE_DICT = [
-        "getUserInfo","getDeviceId","getToken","getAccessToken","login","pay","getLocation","read",
-        "write","upload","download","saveImage","openUrl","startActivity","jumpTo","getContacts",
-        "getClipboard","invoke","execute","call","postMessage","showAddressBook","canlePrivacyPolicy",
-        "callSpeechRecognition","getSimInfo","getImei","getMacAddress","execShell"
-    ];
-
-    // JS 原生内部方法黑名单，保持报告纯净
-    const IGNORES = ["apply", "bind", "call", "toString", "length", "name", "prototype", "constructor", "caller", "callee"];
-
-    // --- 核心引擎：解析被捕获的纯净数据 ---
-    let globalScanData = [];
-    let isHooked = false;
-
-    function runAnalysis() {
-        let stats = { total: 0, high: 0, med: 0 };
-
-        PURE_INJECTED_KEYS.forEach(key => {
-            const obj = window[key];
-            const type = typeof obj;
-            if(type !== "object" && type !== "function") return;
-
-            let methods = [];
-            let maxR = "r-none";
-            const objInfo = evalRisk(key);
-
-            if(obj) {
-                try {
-                    let props = Object.getOwnPropertyNames(obj);
-                    const proto = Object.getPrototypeOf(obj);
-                    if(proto && proto !== Object.prototype && proto !== Function.prototype) {
-                        props = [...new Set([...props, ...Object.getOwnPropertyNames(proto)])];
-                    }
-
-                    props.forEach(p => {
-                        if(IGNORES.includes(p)) return;
-                        const mType = typeof obj[p];
-                        const mInfo = evalRisk(p);
-                        
-                        const levels = {"r-crit": 4, "r-high": 3, "r-med": 2, "r-low": 1, "r-none": 0};
-                        if(levels[mInfo.r] > levels[maxR]) maxR = mInfo.r;
-
-                        methods.push({ name: p, type: mType, info: mInfo });
-                    });
-                } catch(e) {}
+        
+        // 2. 常规解析
+        keys.filter(k => k !== "webkit").forEach(key => {
+            let obj; try { obj = window[key]; } catch(e) { return; }
+            if(typeof obj === "object" || typeof obj === "function") {
+                scanData.push({ name: key, objRef: obj, info: evalRisk(key) });
+                tCount++;
             }
-
-            stats.total++;
-            if(["r-crit", "r-high"].includes(maxR)) stats.high++;
-            if(maxR === "r-med") stats.med++;
-
-            globalScanData.push({ name: key, type: type, info: objInfo, maxRisk: maxR, methods: methods });
         });
 
-        globalScanData.sort((a,b) => {
-            const levels = {"r-crit": 0, "r-high": 1, "r-med": 2, "r-low": 3, "r-none": 4};
-            return levels[a.maxRisk] - levels[b.maxRisk];
-        });
-
-        document.getElementById('stat-total').innerText = stats.total;
-        document.getElementById('stat-high').innerText = stats.high;
-        document.getElementById('stat-med').innerText = stats.med;
-
-        renderObjectList();
+        document.getElementById('obj-count').innerText = tCount;
+        renderList();
+        updateBruteSelect();
+        log(`扫描完成，发现 ${tCount} 个原生对象。`, 'c-ok');
     }
 
-    // --- 渲染 UI ---
-    function renderObjectList() {
-        const listDiv = document.getElementById('object-list');
-        const sel = document.getElementById('brute-target');
-        listDiv.innerHTML = "";
-        sel.innerHTML = `<option value="">-- 选用目标进行强力爆破 --</option>`;
-
-        globalScanData.forEach((item) => {
-            sel.innerHTML += `<option value="${item.name}">window.${item.name}</option>`;
-            
+    function renderList() {
+        const q = document.getElementById('search-input').value.toLowerCase();
+        const list = document.getElementById('obj-list');
+        list.innerHTML = "";
+        
+        scanData.forEach((item, idx) => {
+            if(q && !item.name.toLowerCase().includes(q)) return;
             const div = document.createElement('div');
-            div.className = 'list-item';
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-family:monospace;font-weight:bold;color:var(--blue)">.${item.name}</span>
-                    <span class="risk-tag ${item.maxRisk}">${item.info.cat}</span>
-                </div>
-                <div style="font-size:0.8em;color:var(--text-dim);margin-top:4px;">枚举出子方法: ${item.methods.length} 个</div>
-            `;
-            div.onclick = () => renderTreeView(item, div);
-            listDiv.appendChild(div);
+            div.className = 'obj-item';
+            div.innerHTML = `<span class="obj-name">${item.name}</span><span class="tag ${item.info.r}">${item.info.cat}</span>`;
+            div.onclick = () => {
+                document.querySelectorAll('.obj-item').forEach(el => el.classList.remove('active'));
+                div.classList.add('active');
+                renderTree(item);
+                // 移动端自动切 Tab
+                if(window.innerWidth <= 900) switchTab(1, document.querySelectorAll('.tab')[1]);
+            };
+            list.appendChild(div);
         });
     }
 
-    function renderTreeView(item, domElement) {
-        document.querySelectorAll('.list-item').forEach(el => el.classList.remove('active'));
-        if(domElement) domElement.classList.add('active');
-
-        const container = document.getElementById('tree-container');
-        let html = `<h3 style="color:var(--orange);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:5px;">window.${item.name} <span style="font-size:0.7em;color:var(--text-dim)">[${item.type}]</span></h3>`;
-        
-        if(item.methods.length === 0) {
-            html += `<p style="color:var(--text-dim);line-height:1.6;">⚠️ 此原生对象当前未暴露出任何可被探测的属性。<br>如果确认为 Java 注入的 Bridge，它的方法极有可能被混淆或通过 @JavascriptInterface 保护。<br>👉 <strong style="color:var(--red)">建议在左侧下拉框选中它，使用字典爆破进行强行撞库。</strong></p>`;
-        } else {
-            item.methods.forEach(m => {
-                html += `
-                <div class="tree-node">
-                    <div class="tree-header">
-                        <span class="tree-key">.${m.name}()</span>
-                        <span class="tree-val">[${m.type}]</span>
-                        ${m.info.r !== 'r-none' ? `<span class="risk-tag ${m.info.r}">${m.info.cat}</span>` : ''}
-                        <button class="action-btn" onclick="document.getElementById('exec-path').value='window.${item.name}.${m.name}'; log('已装载调用路径: window.${item.name}.${m.name}', 'warn');">装载至终端</button>
-                    </div>
-                </div>`;
-            });
-        }
-        container.innerHTML = html;
-        document.getElementById('exec-path').value = `window.${item.name}`;
+    // [恢复 scanner2 精髓] 无限层级递归树，带 WeakSet 防死循环
+    function renderTree(item) {
+        document.getElementById('tree-title').innerText = `🌳 ${item.name}`;
+        const container = document.getElementById('tree-body');
+        container.innerHTML = "";
+        container.appendChild(buildTreeNode(item.objRef, `window.${item.name}`, new WeakSet()));
     }
 
-    // ==============================================================================
-    // 在纯净扫描完成之后，最后才把需要绑定给 HTML onclick 的工具方法挂载到 window
-    // 这样它们绝对不会出现在 PURE_INJECTED_KEYS 里面！
-    // ==============================================================================
-
-    runAnalysis(); // 同步执行纯净的数据解析和渲染
-
-    // 1. AOP 拦截器 (Hooking)
-    window.toggleGlobalHook = function() {
-        const btn = document.getElementById('btn-hook');
-        if(isHooked) {
-            log('全局 Hook 已就绪，如需卸载请强制刷新页面。', 'warn');
-            return;
+    function buildTreeNode(obj, path, visited) {
+        if(obj && typeof obj === 'object') {
+            if(visited.has(obj)) {
+                const div = document.createElement('div'); div.className = 'tree-item'; div.innerHTML = '<span class="tree-key">🔄 循环引用</span>'; return div;
+            }
+            visited.add(obj);
         }
+
+        const wrapper = document.createElement('div');
+        const head = document.createElement('div');
+        head.className = 'tree-item';
         
-        let hookCount = 0;
-        globalScanData.forEach(objData => {
-            const target = window[objData.name];
-            if(typeof target === 'object' && target !== null) {
-                objData.methods.forEach(m => {
-                    if(m.type === 'function' && !target[m.name].__hooked) {
-                        const original = target[m.name];
-                        target[m.name] = function(...args) {
-                            const argStr = args.map(a => { try { return JSON.stringify(a); } catch(e){ return String(a); } }).join(', ');
-                            log(`[AOP 拦截] 捕获到底层调用: <b>${objData.name}.${m.name}</b>(${argStr})`, 'hook');
-                            return original.apply(this, args);
-                        };
-                        target[m.name].__hooked = true;
-                        hookCount++;
-                    }
-                });
-            }
-        });
+        const typeStr = typeof obj;
+        const isParent = obj && (typeStr === 'object' || typeStr === 'function');
         
-        window.addEventListener("message", e => {
-            log(`[Window Msg] 捕获到原生异步推送: ${typeof e.data === 'object' ? JSON.stringify(e.data) : e.data}`, 'hook');
-        });
-
-        isHooked = true;
-        btn.innerText = "🛑 AOP Hook 运行中 (刷新解除)";
-        btn.classList.replace('primary', 'danger');
-        log(`AOP 切面部署完毕，成功接管了 ${hookCount} 个原生函数的入参监听。`, 'info');
-    };
-
-    // 2. 隐蔽字典爆破 (Brute Force)
-    window.startBruteForce = function() {
-        const targetName = document.getElementById('brute-target').value;
-        if(!targetName) { log('撞库中止：请先从下拉框选择一个目标对象。', 'err'); return; }
+        let toggleHTML = isParent ? `<span class="tree-toggle" onclick="this.parentElement.nextElementSibling.classList.toggle('show'); this.innerText = this.innerText==='▶'?'▼':'▶'">▶</span>` : `<span style="width:16px;"></span>`;
         
-        const targetObj = window[targetName];
-        const progDiv = document.getElementById('brute-progress');
-        const btn = document.getElementById('btn-brute');
+        const name = path.split('.').pop();
+        const rInfo = evalRisk(name);
+        const tagHTML = rInfo.r !== 't-none' ? `<span class="tag ${rInfo.r}">${rInfo.cat}</span>` : '';
         
-        btn.disabled = true;
-        let idx = 0; let foundCount = 0;
-        log(`💀 发起强力字典撞库: 目标 [window.${targetName}]...`, 'warn');
+        let valHTML = "";
+        if(!isParent) valHTML = `<span class="tree-val"> = ${safeStr(obj)}</span>`;
+        
+        let actionHTML = typeStr === 'function' || path.includes("messageHandlers") ? `<button class="action-btn" onclick="__WVS__.loadPath('${path}')">Load</button>` : '';
 
-        let scanItem = globalScanData.find(i => i.name === targetName);
-        if(!scanItem) return;
+        head.innerHTML = `${toggleHTML}<span class="tree-key ${typeStr}">${name}</span><span class="tree-type">${typeStr}</span>${tagHTML}${valHTML}${actionHTML}`;
+        wrapper.appendChild(head);
 
-        function step() {
-            if(idx >= BRUTE_DICT.length) {
-                btn.disabled = false;
-                progDiv.innerText = `探测完毕！共撞击 ${BRUTE_DICT.length} 次，逼出 ${foundCount} 个隐藏方法。`;
-                log(`🏁 撞库结束。请在中间的树状图面板查看新挖掘出的隐藏接口。`, 'info');
-                if(document.getElementById('exec-path').value.includes(targetName)) renderTreeView(scanItem);
-                return;
-            }
-
-            const testMethod = BRUTE_DICT[idx];
-            progDiv.innerText = `探测中: .${testMethod}() [${idx+1}/${BRUTE_DICT.length}]`;
-
+        if(isParent) {
+            const childrenDiv = document.createElement('div');
+            childrenDiv.className = 'tree-children';
             try {
-                if(targetObj[testMethod] !== undefined && !scanItem.methods.some(m => m.name === testMethod)) {
-                    foundCount++;
-                    const mInfo = evalRisk(testMethod);
-                    scanItem.methods.push({ name: testMethod + " [隐蔽被爆破]", type: "function", info: mInfo });
-                    log(`🎯 撞库成功: 发现隐藏的底层 API 漏洞点 => .${testMethod}()`, 'hook');
-                }
-            } catch(e) {
-                // Android 容器的安全策略经常会导致未经允许的属性读取抛错，这也侧面证明了它的存在
-                if(!scanItem.methods.some(m => m.name === testMethod)) {
-                    foundCount++;
-                    const mInfo = evalRisk(testMethod);
-                    scanItem.methods.push({ name: testMethod + " [越权受保护]", type: "function", info: mInfo });
-                    log(`🎯 撞库成功(边界探测): .${testMethod}() 存在，但因权限原因被容器保护。`, 'warn');
-                }
-            }
-
-            idx++;
-            setTimeout(step, 10);
-        }
-        step();
-    };
-
-    // 3. 执行调用与 Scheme 盲发
-    window.executeCommand = function() {
-        const path = document.getElementById('exec-path').value.replace("window.", "");
-        const paramsRaw = document.getElementById('exec-params').value;
-        if(!path) return;
-
-        log(`> 主动调用: ${path}( ${paramsRaw} )`);
-        try {
-            let target = window; let parent = null;
-            path.split('.').forEach(p => { parent = target; target = target[p.replace(" [隐蔽被爆破]", "").replace(" [越权受保护]", "")]; });
-            
-            if(typeof target === 'function') {
-                let args = [];
-                if(paramsRaw) {
-                    try { args = [JSON.parse(paramsRaw)]; } catch(e) { args = [paramsRaw]; }
-                }
-                const res = target.apply(parent, args);
-                log(`<- 返回值: ${res !== undefined ? JSON.stringify(res) : 'undefined'}`, 'info');
-            } else {
-                log(`<- 该节点为属性变量，当前值: ${JSON.stringify(target)}`, 'info');
-            }
-        } catch(e) {
-            log(`! 执行被阻断: ${e.message}`, 'err');
-        }
-    };
-
-    window.testDeeplink = function() {
-        let url = document.getElementById('exec-params').value.trim() || document.getElementById('exec-path').value.trim();
-        if(!url.includes("://")) {
-            log("! 格式错误：盲发 Deeplink 必须是完整的 URI (如 intent://xxx 或 custom://xxx)", "err");
-            return;
-        }
-        log(`> 盲发协议探测: ${url}`);
-        
-        const cbName = "_dlcb_" + Date.now();
-        window[cbName] = function(res) { log(`🔥 Native 协议回调 [${cbName}]: ${JSON.stringify(res)}`, "hook"); };
-        let finalUrl = url.includes("?") ? `${url}&callback=${cbName}` : `${url}?callback=${cbName}`;
-
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none"; 
-        iframe.src = finalUrl;
-        document.body.appendChild(iframe);
-        setTimeout(() => iframe.parentNode.removeChild(iframe), 2000);
-        log(`<- Payload 已经投递，请观察 App 表现或上述的被动 Terminal 监控日志。`, 'warn');
-    };
-
-    // 4. Markdown 报告导出
-    window.exportMarkdown = function() {
-        let md = `# JSBridge 安全渗透测试报告\n\n`;
-        md += `> **扫描时间:** ${new Date().toLocaleString()}\n`;
-        md += `> **目标页面:** \`${location.href}\`\n`;
-        md += `> **User-Agent:** \`${navigator.userAgent}\`\n\n`;
-
-        let crit=0, high=0, med=0, low=0;
-        globalScanData.forEach(obj => {
-            obj.methods.forEach(m => {
-                if(m.info.r === 'r-crit') crit++;
-                else if(m.info.r === 'r-high') high++;
-                else if(m.info.r === 'r-med') med++;
-                else low++;
-            });
-        });
-
-        md += `## 1. 风险暴露面统计\n`;
-        md += `- **严重 (Critical):** ${crit}\n- **高危 (High):** ${high}\n- **中危 (Medium):** ${med}\n- **安全/未知 (Low):** ${low}\n- **总计注入原生对象:** ${globalScanData.length}\n\n`;
-
-        md += `## 2. 匹配的高危漏洞与 PoC\n`;
-        let hasVuln = false;
-        globalScanData.forEach(obj => {
-            obj.methods.forEach(m => {
-                if(m.info.r === 'r-crit' || m.info.r === 'r-high') {
-                    hasVuln = true;
-                    md += `### [${m.info.r === 'r-crit' ? 'CRITICAL' : 'HIGH'}] ${m.info.cat} - 漏洞预警\n`;
-                    md += `> 描述: ${m.info.desc}\n\n**利用载荷示例 (PoC):**\n\`\`\`javascript\nwindow.${obj.name}.${m.name.replace(/ \[.*?\]/g, "")}();\n\`\`\`\n\n`;
-                }
-            });
-        });
-        if(!hasVuln) md += `*本次自动化扫描暂未发现直接匹配的严重风险规则。*\n\n`;
-
-        md += `## 3. 注入接口详细清单\n`;
-        globalScanData.forEach(obj => {
-            md += `\n### \`window.${obj.name}\`\n`;
-            md += `- **业务分类:** ${obj.info.cat}\n`;
-            if(obj.methods.length > 0) {
-                md += `- **暴露的方法/属性:**\n`;
-                obj.methods.forEach(m => {
-                    const riskTag = m.info.r !== 'r-none' && m.info.r !== 'r-low' ? ` **(🚨风险: ${m.info.cat})**` : '';
-                    md += `  - \`.${m.name}()\`${riskTag}\n`;
+                let keys = Object.getOwnPropertyNames(obj);
+                const proto = Object.getPrototypeOf(obj);
+                if(proto && proto !== Object.prototype && proto !== Function.prototype) keys = [...new Set([...keys, ...Object.getOwnPropertyNames(proto)])];
+                
+                keys.forEach(k => {
+                    if(IGNORES.includes(k)) return;
+                    try {
+                        const childNode = buildTreeNode(obj[k], `${path}.${k}`, visited);
+                        childrenDiv.appendChild(childNode);
+                    } catch(e){}
                 });
-            } else {
-                md += `- *(未扫描到暴露的子属性，已被系统标记，可能需使用字典爆破探测)*\n`;
+            } catch(e) {}
+            wrapper.appendChild(childrenDiv);
+        }
+        return wrapper;
+    }
+
+    function updateBruteSelect() {
+        const sel = document.getElementById('brute-target');
+        sel.innerHTML = '<option value="">选择目标...</option>';
+        scanData.forEach(i => {
+            if(typeof i.objRef === 'object') sel.innerHTML += `<option value="${i.name}">window.${i.name}</option>`;
+        });
+    }
+
+    return {
+        init: function() {
+            document.getElementById('ua-text').innerText = navigator.userAgent;
+            detectBridge();
+            scan();
+        },
+        scan: scan,
+        filter: renderList,
+        
+        loadPath: function(path) {
+            document.getElementById('exec-path').value = path;
+            log(`已装载路径: ${path}`);
+            if(window.innerWidth <= 900) switchTab(2, document.querySelectorAll('.tab')[2]);
+        },
+
+        changeMode: function() {
+            const mode = document.getElementById('call-mode').value;
+            const hints = { "manual": '参数', "string": '"text"', "json": '{"a":1}', "multi": '["a", 1]' };
+            document.getElementById('exec-params').placeholder = hints[mode];
+        },
+
+        // [恢复 scanner2 精髓] 异步 Callback 注入 & 多模式传参
+        execute: function() {
+            const path = document.getElementById('exec-path').value;
+            const pRaw = document.getElementById('exec-params').value.trim();
+            const mode = document.getElementById('call-mode').value;
+            const useCb = document.getElementById('use-cb').checked;
+            if(!path) return;
+
+            log(`> 发送执行: ${path}`, 'c-warn');
+            try {
+                let t = window; let p = null;
+                path.replace("window.", "").split('.').forEach(k => { p = t; t = t[k]; });
+
+                let args = [];
+                if(pRaw) {
+                    if(mode === 'json') args = [JSON.parse(pRaw)];
+                    else if(mode === 'string') args = [pRaw];
+                    else if(mode === 'multi') args = JSON.parse(pRaw);
+                    else { try { args = [JSON.parse(pRaw)]; } catch(e){ args = [pRaw]; } }
+                }
+
+                // [P1] iOS WKWebView 特殊处理
+                if(path.includes("webkit.messageHandlers")) {
+                    t.call(p, args[0]||{});
+                    return log(`<- iOS message 已送出`, 'c-ok');
+                }
+
+                if(typeof t === 'function') {
+                    // [恢复] 注入 Callback
+                    if(useCb) {
+                        const cbName = "_cb_" + Date.now();
+                        window[cbName] = function(data) {
+                            log(`[Callback 返回] ${safeStr(data)}`, 'c-ok');
+                            delete window[cbName];
+                        };
+                        args.push(window[cbName]);
+                        t.apply(p, args);
+                        log(`<- 已注入回调函数 window.${cbName}，等待响应...`, 'c-warn');
+                    } else {
+                        const res = t.apply(p, args);
+                        log(`<- 返回值: ${res !== undefined ? safeStr(res) : 'undefined'}`, 'c-ok');
+                    }
+                } else {
+                    log(`<- 属性读取: ${safeStr(t)}`, 'c-ok');
+                }
+            } catch(e) { log(`! 执行报错: ${e.message}`, 'c-err'); }
+        },
+
+        // [恢复 scanner2 精髓] Fuzzing 测试
+        fuzz: function() {
+            const path = document.getElementById('exec-path').value.replace("window.", "");
+            if(!path) return alert("请指定执行路径");
+            if(!confirm(`将发送 ${FUZZ_PARAMS.length} 种异常参数测试崩溃，继续？`)) return;
+            
+            log(`[Fuzz] 启动模糊测试: ${path}`, 'c-warn');
+            let t = window; let p = null;
+            try { path.split('.').forEach(k => { p = t; t = t[k]; }); } catch(e) { return log(`无效路径`, 'c-err'); }
+
+            if(typeof t !== 'function') return log(`目标非函数`, 'c-err');
+
+            let errCount = 0;
+            FUZZ_PARAMS.forEach((param, idx) => {
+                setTimeout(() => {
+                    try {
+                        let arg = param;
+                        if(param==="null") arg = null; else if(param==="undefined") arg = undefined; else { try{arg=JSON.parse(param);}catch(e){} }
+                        t.call(p, arg);
+                        log(`[Fuzz ${idx+1}] 发送: ${param} -> 正常`, 'c-sys');
+                    } catch(e) {
+                        errCount++;
+                        log(`[Fuzz ${idx+1}] 💥 异常: ${e.message}`, 'c-err');
+                    }
+                    if(idx === FUZZ_PARAMS.length -1) log(`[Fuzz 结束] 触发异常: ${errCount} 次。若App未闪退，说明底座鲁棒性良好。`, 'c-warn');
+                }, idx * 50);
+            });
+        },
+
+        // [P1] in 爆破 (防卡死分批)
+        brute: function() {
+            const tName = document.getElementById('brute-target').value;
+            if(!tName) return alert("请选择目标");
+            let targetObj; try { targetObj = window[tName]; } catch(e) { return; }
+
+            const prog = document.getElementById('brute-log');
+            document.getElementById('btn-brute').disabled = true;
+            let idx = 0, found = 0;
+            log(`[Brute] 开始用 'in' 操作符试探 ${tName}...`, 'c-warn');
+
+            function step() {
+                if(idx >= BRUTE_DICT.length) {
+                    document.getElementById('btn-brute').disabled = false;
+                    prog.innerText = `爆破完毕，发现 ${found} 个隐藏入口。`;
+                    // 重新扫描以更新左侧列表和树
+                    scan(); 
+                    return;
+                }
+                const mName = BRUTE_DICT[idx];
+                prog.innerText = `试探: ${mName} [${idx+1}/${BRUTE_DICT.length}]`;
+                
+                try {
+                    // [P1核心] 使用 in 更安全
+                    if(mName in targetObj) {
+                        found++;
+                        log(`🎯 撞库命中: .${mName}()`, 'c-ok');
+                    }
+                } catch(e) {
+                    found++;
+                    log(`🎯 越权拦截证实存在: .${mName}()`, 'c-err');
+                }
+                idx++; setTimeout(step, 10);
             }
-        });
+            step();
+        },
 
-        document.getElementById('report-body').innerText = md;
-        document.getElementById('report-modal').style.display = 'flex';
+        // Deeplink
+        deeplink: function() {
+            let url = document.getElementById('exec-params').value;
+            if(!url.includes('://')) url = document.getElementById('exec-path').value;
+            if(!url.includes('://')) return log("! 请输入合法的 Scheme URL", "c-err");
+
+            log(`> 盲发 Deeplink: ${url}`, 'c-warn');
+            const cbName = "_dlcb_" + Date.now();
+            window[cbName] = function(res) { log(`🔥 Scheme回调: ${safeStr(res)}`, "c-ok"); };
+            
+            const fUrl = url.includes("?") ? `${url}&callback=${cbName}` : `${url}?callback=${cbName}`;
+            const iframe = document.createElement("iframe");
+            iframe.style.display = "none"; iframe.src = fUrl;
+            document.body.appendChild(iframe);
+            setTimeout(() => iframe.remove(), 3000);
+        },
+
+        // [P3] 全局 Hook
+        hook: function() {
+            if(isHooked) return log('Hook 已开启', 'c-warn');
+            let hCount = 0;
+            scanData.forEach(item => {
+                let obj; try { obj = window[item.name]; } catch(e){ return; }
+                if(typeof obj === 'object') {
+                    Object.getOwnPropertyNames(obj).forEach(k => {
+                        if(typeof obj[k] === 'function' && !obj[k].__hooked) {
+                            try {
+                                const orig = obj[k];
+                                obj[k] = function(...args) {
+                                    log(`[AOP 拦截] <b>${item.name}.${k}</b>( ${args.map(a=>safeStr(a)).join(', ')} )`, 'c-hook');
+                                    return orig.apply(this, args);
+                                };
+                                obj[k].__hooked = true;
+                                hCount++;
+                            } catch(e){}
+                        }
+                    });
+                }
+            });
+            window.addEventListener("message", e => log(`[被动推送] Msg: ${safeStr(e.data)}`, 'c-hook'));
+            isHooked = true;
+            document.getElementById('btn-hook').innerText = "🛑 Hook 监听中";
+            log(`[P3] AOP 部署完成，接管 ${hCount} 个方法。`, 'c-ok');
+        },
+
+        // [P2] 导出报告
+        export: function() {
+            let md = `# JSBridge 安全扫描报告\n\n> **生成时间:** ${new Date().toLocaleString()}\n> **识别指纹:** ${document.getElementById('bridge-badge').innerText}\n> **UA:** ${navigator.userAgent}\n\n`;
+            
+            md += `## 注入对象发现 (${scanData.length}个)\n`;
+            scanData.forEach(obj => {
+                md += `\n### \`window.${obj.name}\` [${obj.info.cat}]\n`;
+                let hasMethod = false;
+                if(typeof obj.objRef === 'object') {
+                    try {
+                        let props = Object.getOwnPropertyNames(obj.objRef);
+                        const proto = Object.getPrototypeOf(obj.objRef);
+                        if(proto && proto !== Object.prototype) props = [...new Set([...props, ...Object.getOwnPropertyNames(proto)])];
+                        
+                        props.forEach(p => {
+                            if(!IGNORES.includes(p)) {
+                                hasMethod = true;
+                                const mInfo = evalRisk(p);
+                                md += `- \`.${p}()\` ${mInfo.r !== 't-none' ? `**(🚨风险: ${mInfo.desc})**` : ''}\n`;
+                            }
+                        });
+                    } catch(e){}
+                }
+                // iOS 专属
+                if(obj.name.includes("messageHandlers")) {
+                    hasMethod = true;
+                    md += `- \`.postMessage()\` *(iOS 消息通道)*\n`;
+                }
+                
+                if(!hasMethod) md += `- *(未暴露公共方法，请使用爆破进行二次确认)*\n`;
+            });
+
+            document.getElementById('md-body').innerText = md;
+            document.getElementById('md-modal').style.display = 'flex';
+        },
+
+        copyReport: function() {
+            const ta = document.createElement("textarea");
+            ta.value = document.getElementById('md-body').innerText; 
+            document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
+            alert("Markdown 报告已复制！");
+        }
     };
-
-    window.copyReport = function() {
-        const text = document.getElementById('report-body').innerText;
-        navigator.clipboard.writeText(text).then(() => {
-            log('报告 Markdown 代码已复制到剪贴板。', 'info');
-            document.getElementById('report-modal').style.display = 'none';
-        });
-    };
-
 })();
+
+// 启动
+setTimeout(window.__WVS__.init, 200);
 </script>
 </body>
 </html>
