@@ -30,8 +30,9 @@
     .btn.danger { background: rgba(255, 51, 102, 0.1); border-color: var(--red); color: var(--red); }
     .btn.warn { background: rgba(255, 193, 7, 0.1); border-color: var(--yellow); color: var(--yellow); }
 
-    .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .tab { flex: 1; text-align: center; padding: 12px 0; font-size: 13px; font-weight: bold; color: var(--text-dim); border-bottom: 2px solid transparent; cursor: pointer;}
+    .tabs { display: flex; background: var(--card); border-bottom: 1px solid var(--border); flex-shrink: 0; width: 100%; overflow-x: auto; }
+    .tabs::-webkit-scrollbar { display: none; }
+    .tab { flex: 1; min-width: 60px; text-align: center; padding: 12px 4px; font-size: 12px; font-weight: bold; color: var(--text-dim); border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap;}
     .tab.active { color: var(--blue); border-bottom-color: var(--blue); background: rgba(0,229,255,0.05);}
 
     .workspace { display: flex; flex: 1; overflow: hidden; position: relative;}
@@ -41,7 +42,7 @@
     .panel-body { padding: 12px; display: flex; flex-direction: column; flex: 1;}
 
     .env-card { background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-bottom: 10px; }
-    .env-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; font-weight: bold; }
+    .env-label { font-size: 11px; color: var(--text-dim); margin-bottom: 6px; font-weight: bold; text-transform: uppercase;}
     .env-val { font-family: monospace; font-size: 12px; color: var(--green); word-break: break-all; max-height: 100px; overflow-y: auto; }
 
     .search-box { width: 100%; padding: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; outline: none; margin-bottom: 10px; font-family: monospace;}
@@ -58,11 +59,11 @@
     .tree-children { margin-left: 18px; display: none; border-left: 1px dashed var(--border); padding-left: 6px;}
     .tree-children.show { display: block; }
 
-    .input-base { width: 100%; padding: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; font-family: monospace; outline: none; margin-bottom: 10px; }
+    .input-base { width: 100%; padding: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; font-family: monospace; outline: none; margin-bottom: 10px; font-size: 13px;}
     .input-base:focus { border-color: var(--blue); }
     .control-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; width: 100%;}
     
-    .terminal { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 12px; height: 220px; overflow-y: auto; font-family: "Courier New", monospace; font-size: 12px; margin-bottom: 15px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);}
+    .terminal { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 12px; flex: 1; overflow-y: auto; font-family: "Courier New", monospace; font-size: 11px; margin-bottom: 15px; box-shadow: inset 0 0 10px rgba(0,0,0,0.5); min-height: 180px;}
     .log-line { margin-bottom: 6px; word-break: break-all; line-height: 1.4;}
     .c-time { color: var(--text-dim); margin-right: 5px; user-select: none;}
     .c-ok { color: var(--green); } .c-err { color: var(--red); } .c-sys { color: var(--blue); } .c-warn { color: var(--yellow); } .c-hook { color: var(--purple); }
@@ -73,8 +74,8 @@
 
     @media (min-width: 900px) {
         .tabs { display: none; }
-        .workspace { flex-direction: row; }
-        .panel { display: flex !important; border-right: 1px solid var(--border); height: 100%; width: 25%; }
+        .workspace { flex-direction: row; flex-wrap: wrap;}
+        .panel { display: flex !important; border-right: 1px solid var(--border); height: 100%; width: 25%; border-bottom: none;}
         .panel:last-child { border-right: none; }
     }
 </style>
@@ -94,7 +95,7 @@
     </div>
 </div>
 
-<div class="tabs">
+<div class="tabs" id="mobile-tabs">
     <div class="tab active" onclick="switchTab(0)">🌐 环境</div>
     <div class="tab" onclick="switchTab(1)">📦 对象</div>
     <div class="tab" onclick="switchTab(2)">🌳 解析</div>
@@ -127,7 +128,7 @@
             <div style="flex-shrink: 0; background: var(--card); padding: 10px; border-radius: 6px; border: 1px solid var(--border);">
                 <div style="color:var(--red); font-weight:bold; margin-bottom:8px;">🔥 字典补充探测 (P1)</div>
                 <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.4;">
-                    部分原生 API 因属性不可枚举导致自动提取遗漏，在此使用字典进行安全探测。
+                    针对隐式声明的原生对象（无可见子属性），使用内置 100+ 高频安全字典进行安全探测。
                 </div>
                 <div class="control-row" style="margin-bottom:0;">
                     <select id="brute-target" class="input-base" style="margin-bottom:0; flex: 1;"></select>
@@ -147,7 +148,7 @@
             </div>
         </div>
         <div class="panel-body" id="tree-body">
-            <div style="text-align:center; padding: 40px; color: var(--text-dim);">👈 请在列表中选择对象</div>
+            <div style="text-align:center; padding: 40px; color: var(--text-dim);">👈 请在【对象池】选择对象</div>
         </div>
     </div>
 
@@ -163,15 +164,15 @@
                 <input type="text" id="exec-path" class="input-base" style="color:var(--green); font-weight:bold;" placeholder="路径 (如: window.obj.func 或 jsbridge://)">
                 
                 <div class="control-row">
-                    <input type="text" id="exec-params" class="input-base" style="margin-bottom:0; flex:1;" placeholder='参数 / Payload (如 {"id":1} 或 "test")'>
-                    <label style="font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; white-space: nowrap;">
+                    <input type="text" id="exec-params" class="input-base" style="margin-bottom:0; flex:1;" placeholder='参数 / Payload (如 {"id":1})'>
+                    <label style="font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; white-space: nowrap;" title="自动注入时间戳函数以捕获异步结果">
                         <input type="checkbox" id="use-cb"> Callback
                     </label>
                 </div>
                 
                 <div class="control-row">
                     <button class="btn primary" style="flex: 1;" onclick="__WVS__.execute()">⚡ 发送 Call</button>
-                    <button class="btn warn" style="flex: 1;" onclick="__WVS__.fuzz()">🧪 连通探测</button>
+                    <button class="btn warn" style="flex: 1;" onclick="__WVS__.fuzz()" title="自动推测存活参数">🧪 连通探测</button>
                     <button class="btn" style="flex: 1;" onclick="__WVS__.deeplink()">🔗 Deeplink</button>
                 </div>
             </div>
@@ -207,24 +208,55 @@ window.__WVS__ = (function() {
     const IGNORES = ["apply", "bind", "call", "toString", "length", "name", "prototype", "constructor", "caller", "callee"];
     
     const KNOWLEDGE = [
-        { kw: ["exec","eval","shell","system"], cat: "命令执行", r: "t-crit", desc: "可执行系统级命令" },
-        { kw: ["pay","alipay","wxpay"], cat: "支付接口", r: "t-crit", desc: "拉起支付结算链路" },
-        { kw: ["contact","addressbook"], cat: "通讯录", r: "t-high", desc: "获取用户隐私通讯录" },
-        { kw: ["file","readfile","openurl"], cat: "文件/越权", r: "t-high", desc: "读取文件或打开跨域URL" },
-        { kw: ["login","token","auth"], cat: "凭证操作", r: "t-high", desc: "操作用户登录凭证" },
-        { kw: ["intent","startactivity"], cat: "组件逃逸", r: "t-high", desc: "拉起App内部原生组件" },
-        { kw: ["deviceid","imei","mac"], cat: "设备指纹", r: "t-med", desc: "获取设备唯一识别码" },
-        { kw: ["location","gps"], cat: "物理定位", r: "t-med", desc: "获取真实GPS坐标" }
+        { kw: ["exec","eval","shell","system","command"], cat: "命令执行", r: "t-crit", desc: "极高危：可执行系统级命令" },
+        { kw: ["pay","alipay","wxpay","checkout","wallet"], cat: "支付越权", r: "t-crit", desc: "极高危：未授权拉起支付结算链路" },
+        { kw: ["contact","addressbook","sms","calllog"], cat: "核心隐私", r: "t-high", desc: "高危：静默窃取用户极敏感通讯与信件" },
+        { kw: ["file","readfile","openfile","downloadfile"], cat: "越权文件", r: "t-high", desc: "高危：越权读取App私有沙盒目录" },
+        { kw: ["login","token","auth","session","ticket"], cat: "凭证窃取", r: "t-high", desc: "高危：伪造或窃取登录态凭证" },
+        { kw: ["intent","startactivity","launchapp","openurl"], cat: "组件逃逸", r: "t-high", desc: "高危：越权拉起App原生组件或外部恶意URL" },
+        { kw: ["encrypt","decrypt","rsa","aes","md5"], cat: "加密算法", r: "t-high", desc: "高危：调用底层的核心加解密逻辑" },
+        { kw: ["deviceid","imei","mac","uuid","serial"], cat: "设备指纹", r: "t-med", desc: "中危：获取硬件设备唯一标识码" },
+        { kw: ["location","gps","position"], cat: "物理定位", r: "t-med", desc: "中危：静默获取用户真实物理坐标" },
+        { kw: ["storage","getdata","setdata"], cat: "存储操作", r: "t-med", desc: "中危：操作本地持久化缓存数据" }
     ];
     
-    // 探测隐藏 API 用字典
-    const BRUTE_DICT = ["getUserInfo","getDeviceId","getToken","pay","getLocation","read","write","download","openUrl","startActivity","getContacts","invoke","execute","call","postMessage","showAddressBook","scanQRCode","closeWindow","setupWebViewJavascriptBridge"];
+    // 【重磅扩展】百大渗透探路字典
+    const BRUTE_DICT = [
+        // 账号凭证
+        "getUserInfo","getUserId","getDeviceId","getToken","getAccessToken","getTicket","login","logout","register","checkSession","auth","sign",
+        // 设备系统
+        "getImei","getMacAddress","getSimInfo","getNetworkType","getSystemInfo","getDeviceInfo","getAppInfo","getVersion","getBattery","vibrate","getClipboardData","setClipboardData",
+        // 路由生命周期
+        "openUrl","startActivity","jumpTo","closeWindow","goBack","reload","openApp","launchApp","navigateTo","exit",
+        // 硬件与多媒体
+        "getLocation","openLocation","openCamera","chooseImage","previewImage","uploadImage","downloadImage","saveImage","startRecord","stopRecord","playVoice","scanQRCode","scan",
+        // UI操作
+        "showToast","showAlert","showLoading","hideLoading","showModal","showActionSheet","setNavigationBarTitle",
+        // 文件与存储
+        "read","write","readFile","writeFile","openFile","downloadFile","uploadFile","setStorage","getStorage","removeStorage","clearStorage","saveFile",
+        // 加解密
+        "encrypt","decrypt","rsa","aes","md5","base64","getSignature",
+        // 底层反射
+        "invoke","execute","call","postMessage","callNative","send","dispatch","execShell","setupWebViewJavascriptBridge","callHandler",
+        // 敏感隐私
+        "getContacts","showAddressBook","getCallLog","getSms"
+    ];
     
-    // 验证 API 连通性测试用的常用参数集合
+    // 【重磅扩展】Fuzz 参数连通性与恶意载荷字典
     const FUZZ_PARAMS = [
-        null, undefined, "", 0, 1, true, false,
-        "test", "{}", "[]", '{"id":"1"}', '["test"]',
-        "http://127.0.0.1", "javascript:alert(1)"
+        // 常规推断 (寻找通关参数类型)
+        null, undefined, "", 0, 1, -1, true, false, NaN, 
+        "test", "{}", "[]", '{"id":1}', '["test"]',
+        // 越界崩溃与污染
+        2147483647, -2147483648, 999999999999999, '{"__proto__":{"vuln":1}}', "A".repeat(5000),
+        // LFI 路径穿越
+        "../../../etc/passwd", "../../../../../../../../windows/win.ini", "file:///data/data/", "file:///etc/hosts",
+        // XSS 逃逸
+        "javascript:alert(1)", "<svg/onload=alert(1)>", "\"><script>alert(1)</script>",
+        // SSRF
+        "http://127.0.0.1:8080", "http://169.254.169.254/latest/meta-data/", "dict://127.0.0.1",
+        // Command / SQLi
+        "; id", "| ls -la", "`whoami`", "' OR 1=1 --", "1' OR '1'='1"
     ];
 
     let scanData = [];
@@ -245,7 +277,7 @@ window.__WVS__ = (function() {
     function evalRisk(name) {
         const s = name.toLowerCase();
         for(let r of KNOWLEDGE) { if(r.kw.some(k => s.includes(k))) return r; }
-        return { cat: "常规接口", r: "t-none", desc: "自定义业务属性" };
+        return { cat: "常规业务", r: "t-none", desc: "未定级之业务属性或方法" };
     }
 
     function resolvePath(pathStr) {
@@ -254,17 +286,17 @@ window.__WVS__ = (function() {
         return { target: t, parent: p };
     }
 
+    // 环境与存储信息采集
     function detectEnvironment() {
         const ua = navigator.userAgent;
         document.getElementById('env-ua').innerText = ua;
-        document.getElementById('env-cookie').innerText = document.cookie || "(空)";
-        try { document.getElementById('env-ls').innerText = Object.keys(localStorage).join(", ") || "(空)"; } catch(e) { document.getElementById('env-ls').innerText = "跨域受限"; }
-        try { document.getElementById('env-ss').innerText = Object.keys(sessionStorage).join(", ") || "(空)"; } catch(e) { document.getElementById('env-ss').innerText = "跨域受限"; }
+        document.getElementById('env-cookie').innerText = document.cookie || "(空或 HttpOnly)";
+        try { document.getElementById('env-ls').innerText = Object.keys(localStorage).join(", ") || "(空)"; } catch(e) { document.getElementById('env-ls').innerText = "跨域读取受限"; }
+        try { document.getElementById('env-ss').innerText = Object.keys(sessionStorage).join(", ") || "(空)"; } catch(e) { document.getElementById('env-ss').innerText = "跨域读取受限"; }
 
-        let os = "Unknown OS";
+        let os = "Browser";
         if (/android/i.test(ua)) os = "Android";
         else if (/iphone|ipad|ipod/i.test(ua)) os = "iOS";
-        else os = "Browser";
 
         let fw = "Native Bridge";
         if(window.webkit && window.webkit.messageHandlers) fw = "WKWebView";
@@ -273,7 +305,7 @@ window.__WVS__ = (function() {
         else if(window.ReactNativeWebView) fw = "React Native";
         
         document.getElementById('bridge-badge').innerText = `${os} | ${fw}`;
-        log(`环境探测: ${os} - ${fw}`);
+        log(`操作系统与框架识别: ${os} - ${fw}`);
     }
 
     function scan() {
@@ -293,6 +325,7 @@ window.__WVS__ = (function() {
         scanData = [];
         let tCount = 0;
 
+        // iOS WKWebView 解析
         if (window.webkit && window.webkit.messageHandlers) {
             Object.keys(window.webkit.messageHandlers).forEach(h => {
                 const mInfo = evalRisk(h);
@@ -305,6 +338,7 @@ window.__WVS__ = (function() {
             });
         }
         
+        // 常规反射解析
         keys.filter(k => k !== "webkit").forEach(key => {
             let obj; try { obj = window[key]; } catch(e) { return; }
             if(typeof obj === "object" || typeof obj === "function") {
@@ -328,6 +362,7 @@ window.__WVS__ = (function() {
             }
         });
 
+        // 高危预警置顶
         scanData.sort((a,b) => {
             const lvls = {"t-crit": 0, "t-high": 1, "t-med": 2, "t-none": 3};
             return (lvls[a.maxRisk]||9) - (lvls[b.maxRisk]||9);
@@ -336,7 +371,7 @@ window.__WVS__ = (function() {
         document.getElementById('obj-count').innerText = tCount;
         renderList();
         updateBruteSelect();
-        log(`扫描快照更新，捕获原生对象 ${tCount} 个。`, 'c-ok');
+        log(`沙箱快照对比完成，成功捕获原生对象 ${tCount} 个。`, 'c-ok');
     }
 
     function renderList() {
@@ -369,7 +404,7 @@ window.__WVS__ = (function() {
     function buildTreeNode(obj, path, visited) {
         if(obj && typeof obj === 'object') {
             if(visited.has(obj)) {
-                const div = document.createElement('div'); div.className = 'tree-item'; div.innerHTML = '<span class="tree-key">🔄 循环引用</span>'; return div;
+                const div = document.createElement('div'); div.className = 'tree-item'; div.innerHTML = '<span class="tree-key">🔄 循环引用截断</span>'; return div;
             }
             visited.add(obj);
         }
@@ -391,7 +426,7 @@ window.__WVS__ = (function() {
         if(!isParent) valHTML = `<span class="tree-val"> = ${safeStr(obj)}</span>`;
         
         let actionHTML = (typeStr === 'function' || path.includes("messageHandlers")) ? 
-            `<button class="btn" style="padding:2px 8px; margin-left:auto; font-size:10px;" onclick="__WVS__.loadPath('${path}')">Load</button>` : '';
+            `<button class="btn" style="padding:2px 8px; margin-left:auto; font-size:10px;" onclick="__WVS__.loadPath('${path}')">装载</button>` : '';
 
         head.innerHTML = `${toggleHTML}<span class="tree-key ${typeStr}">${name}</span><span class="tree-type">${typeStr}</span>${tagHTML}${valHTML}${actionHTML}`;
         wrapper.appendChild(head);
@@ -419,7 +454,7 @@ window.__WVS__ = (function() {
 
     function updateBruteSelect() {
         const sel = document.getElementById('brute-target');
-        sel.innerHTML = '<option value="">-- 选择探测目标 --</option>';
+        sel.innerHTML = '<option value="">-- 请选择要辅助探测的容器对象 --</option>';
         scanData.forEach(i => {
             if(typeof i.objRef === 'object' && !i.name.includes("messageHandlers")) {
                 sel.innerHTML += `<option value="${i.name}">window.${i.name}</option>`;
@@ -448,7 +483,7 @@ window.__WVS__ = (function() {
             const cleanPath = path.replace(/ \[.*?\]/g, "");
             document.getElementById('exec-path').value = cleanPath;
             log(`已装载测试路径: ${cleanPath}`, 'c-warn');
-            if(window.innerWidth <= 900) switchTab(3);
+            if(window.innerWidth <= 900) switchTab(3); // 移动端切到终端
         },
 
         execute: function() {
@@ -457,50 +492,50 @@ window.__WVS__ = (function() {
             const useCb = document.getElementById('use-cb').checked;
             if(!path) return;
 
-            log(`> 发送 Call: ${path}`, 'c-sys');
+            log(`> 发起 Call: ${path}`, 'c-sys');
             try {
                 let { target: t, parent: p } = resolvePath(path);
                 let args = pRaw ? [parseParam(pRaw)] : [];
 
                 if(path.includes("webkit.messageHandlers")) {
                     t.call(p, args[0]||{});
-                    return log(`<- iOS message 已发往底层`, 'c-ok');
+                    return log(`<- [iOS] message 载荷已送达底层`, 'c-ok');
                 }
 
                 if(typeof t === 'function') {
                     if(useCb) {
                         const cbName = "_cb_" + Date.now();
                         window[cbName] = function(data) {
-                            log(`[Callback 返回] ${safeStr(data)}`, 'c-ok');
+                            log(`[Native 异步返回] ${safeStr(data)}`, 'c-ok');
                             delete window[cbName];
                         };
                         args.push(window[cbName]);
                         t.apply(p, args);
-                        log(`<- 已注入临时回调 window.${cbName}，等待响应...`, 'c-warn');
+                        log(`<- 动态注入了回调监听函数 window.${cbName}，等待响应中...`, 'c-warn');
                     } else {
                         const res = t.apply(p, args);
-                        log(`<- 返回值: ${res !== undefined ? safeStr(res) : 'undefined'}`, 'c-ok');
+                        log(`<- [同步返回]: ${res !== undefined ? safeStr(res) : 'undefined'}`, 'c-ok');
                     }
                 } else {
-                    log(`<- 属性读取: ${safeStr(t)}`, 'c-ok');
+                    log(`<- 属性变量读取: ${safeStr(t)}`, 'c-ok');
                 }
-            } catch(e) { log(`! 执行异常: ${e.message}`, 'c-err'); }
+            } catch(e) { log(`! 执行阻断/崩溃: ${e.message}`, 'c-err'); }
         },
 
-        // 测试接口参数类型，探测连通性
+        // 测试连通性：成功即停
         fuzz: function() {
             const path = document.getElementById('exec-path').value.replace("window.", "");
             if(!path) return alert("请指定执行路径");
             
             let { target: t, parent: p } = resolvePath(path);
-            if(typeof t !== 'function') return log(`目标非函数，无法进行探测`, 'c-err');
+            if(typeof t !== 'function') return log(`目标节点非函数，Fuzz 中止`, 'c-err');
 
-            log(`[Fuzz] 开始连通性探测: ${path}`, 'c-warn');
+            log(`[Fuzz] 启动接口连通性自动推断: ${path}`, 'c-warn');
             let success = false;
 
             function nextFuzz(idx) {
                 if (success || idx >= FUZZ_PARAMS.length) {
-                    if (!success) log(`[Fuzz] 结束，未找到成功响应的参数类型。`, 'c-err');
+                    if (!success) log(`[Fuzz] 发送完毕，所有形态参数均被容器异常拦截或抛错。`, 'c-err');
                     return;
                 }
                 let param = FUZZ_PARAMS[idx];
@@ -509,20 +544,19 @@ window.__WVS__ = (function() {
                     if(param === "null") arg = null; else if(param === "undefined") arg = undefined; else { try{arg=JSON.parse(param);}catch(e){} }
                     
                     t.call(p, arg);
-                    log(`🎉 [Fuzz 成功] 接口连通！接受的参数类型为: ${typeof arg} (${safeStr(param)})`, 'c-ok');
-                    success = true; 
+                    log(`🎉 [连通成功] 接口放行！该函数接受的有效参数推测为: ${typeof arg} (${safeStr(param)})`, 'c-ok');
+                    success = true; // 成功探测出类型，立即停止后续暴力发包
                 } catch(e) {
-                    log(`[Fuzz] 参数尝试: ${safeStr(param).substring(0,10)} -> 失败或被拦截`, 'c-sys');
+                    log(`[Fuzz] 参数试探失败: ${safeStr(param).substring(0,12)}...`, 'c-sys');
                     setTimeout(() => nextFuzz(idx + 1), 50);
                 }
             }
             nextFuzz(0);
         },
 
-        // 补充探测模块：安置于面板1底部
         brute: function() {
             const tName = document.getElementById('brute-target').value;
-            if(!tName) return alert("请先选择目标");
+            if(!tName) return alert("请先在下拉框选择目标对象！");
             
             let { target: targetObj } = resolvePath(tName);
             if(!targetObj) return log(`[Error] 无法解析目标 ${tName}`, 'c-err');
@@ -532,33 +566,33 @@ window.__WVS__ = (function() {
             document.getElementById('btn-brute').disabled = true;
             
             let idx = 0, found = 0;
-            log(`[Brute] 开始对 ${tName} 进行字典补充探测...`, 'c-warn');
+            log(`[Brute] 使用百大高频字典辅助探测 ${tName}...`, 'c-warn');
 
             let scanItem = scanData.find(i => i.name === tName);
 
             function step() {
                 if(idx >= BRUTE_DICT.length) {
                     document.getElementById('btn-brute').disabled = false;
-                    progDiv.innerText = `探测完毕，发现 ${found} 个隐藏入口。`;
-                    log(`[Brute] 探测完毕，发现 ${found} 个隐藏入口。`, 'c-ok');
+                    progDiv.innerText = `探测完毕：共命中 ${found} 个隐藏方法。`;
+                    log(`[Brute] 探测环节结束，命中 ${found} 个底层隐藏入口。`, 'c-ok');
                     renderList();
                     if(document.getElementById('exec-path').value.includes(tName)) renderTree(scanItem);
                     return;
                 }
                 const mName = BRUTE_DICT[idx];
-                progDiv.innerText = `探测进度: .${mName}() [${idx+1}/${BRUTE_DICT.length}]`;
+                progDiv.innerText = `验证进度: .${mName}() [${idx+1}/${BRUTE_DICT.length}]`;
                 
                 try {
                     if(mName in targetObj && !scanItem.methods.some(m => m.name === mName)) {
                         found++;
                         scanItem.methods.push({ name: mName, type: "function", info: evalRisk(mName) });
-                        log(`🎯 命中隐藏接口: .${mName}()`, 'c-hook');
+                        log(`🎯 [精准命中] 成功探出不可枚举方法: .${mName}()`, 'c-hook');
                     }
                 } catch(e) {
                     if(!scanItem.methods.some(m => m.name === mName)) {
                         found++;
                         scanItem.methods.push({ name: mName, type: "function", info: evalRisk(mName) });
-                        log(`🎯 越权拦截验证存在: .${mName}()`, 'c-err');
+                        log(`🎯 [权限拦截] 异常捕获验证方法存在: .${mName}()`, 'c-err');
                     }
                 }
                 idx++; setTimeout(step, 10);
@@ -568,11 +602,11 @@ window.__WVS__ = (function() {
 
         deeplink: function() {
             let url = document.getElementById('exec-params').value.trim() || document.getElementById('exec-path').value.trim();
-            if(!url.includes('://')) return log("! 盲发必须输入完整的 URI Scheme (如 app://)", "c-err");
+            if(!url.includes('://')) return log("! 盲发必须输入完整的 URI Scheme (如 myapp://)", "c-err");
 
-            log(`> 盲发 Deeplink: ${url}`, 'c-warn');
+            log(`> 发送 Deeplink: ${url}`, 'c-warn');
             const cbName = "_cb_" + Date.now();
-            window[cbName] = function(res) { log(`🔥 Scheme回调: ${safeStr(res)}`, "c-hook"); };
+            window[cbName] = function(res) { log(`🔥 捕获到 Scheme 唤醒回调: ${safeStr(res)}`, "c-hook"); };
             
             const fUrl = url.includes("?") ? `${url}&callback=${cbName}` : `${url}?callback=${cbName}`;
             const iframe = document.createElement("iframe");
@@ -582,7 +616,7 @@ window.__WVS__ = (function() {
         },
 
         hook: function() {
-            if(isHooked) return log('Hook 已开启，重置请刷新', 'c-warn');
+            if(isHooked) return log('AOP 已在运行中，重置请刷新页面。', 'c-warn');
             let hCount = 0;
             
             scanData.forEach(item => {
@@ -594,7 +628,7 @@ window.__WVS__ = (function() {
                             try {
                                 const orig = obj[cleanName];
                                 obj[cleanName] = function(...args) {
-                                    log(`[AOP 拦截] <b>${item.name}.${cleanName}</b>( ${args.map(a=>safeStr(a)).join(', ')} )`, 'c-hook');
+                                    log(`[AOP 动态拦截] <b>${item.name}.${cleanName}</b>( ${args.map(a=>safeStr(a)).join(', ')} )`, 'c-hook');
                                     return orig.apply(this, args);
                                 };
                                 obj[cleanName].__hooked = true;
@@ -604,24 +638,24 @@ window.__WVS__ = (function() {
                     });
                 }
             });
-            window.addEventListener("message", e => log(`[异步推送] Msg: ${safeStr(e.data)}`, 'c-hook'));
+            window.addEventListener("message", e => log(`[异步推送捕获] Msg: ${safeStr(e.data)}`, 'c-hook'));
             isHooked = true;
-            document.getElementById('btn-hook').innerText = "🛑 AOP Hook 监听中";
-            log(`[P3] AOP 部署完成，接管了 ${hCount} 个底层入口。`, 'c-ok');
+            document.getElementById('btn-hook').innerText = "🛑 监听中...";
+            log(`[P3] AOP 拦截网部署完成，已静默代理 ${hCount} 个原生接口。`, 'c-ok');
         },
 
         export: function() {
-            let md = `# JSBridge 安全扫描报告\n\n> **扫描时间:** ${new Date().toLocaleString()}\n> **环境指纹:** ${document.getElementById('bridge-badge').innerText}\n> **UA:** ${navigator.userAgent}\n\n`;
+            let md = `# JSBridge 安全扫描报告\n\n> **生成时间:** ${new Date().toLocaleString()}\n> **环境指纹:** ${document.getElementById('bridge-badge').innerText}\n> **UA:** ${navigator.userAgent}\n\n`;
             
-            md += `## 注入对象发现 (${scanData.length}个)\n`;
+            md += `## 注入对象清单 (${scanData.length}个)\n`;
             scanData.forEach(obj => {
                 md += `\n### \`window.${obj.name}\` [${obj.info.cat}]\n`;
                 if(obj.methods.length > 0) {
                     obj.methods.forEach(m => {
-                        md += `- \`.${m.name}()\` ${m.info.r !== 't-none' ? `**(🚨风险: ${m.info.desc})**` : ''}\n`;
+                        md += `- \`.${m.name}()\` ${m.info.r !== 't-none' ? `**(🚨风险评估: ${m.info.desc})**` : ''}\n`;
                     });
                 } else {
-                    md += `- *(未自动枚举出子属性，建议使用字典补充探测)*\n`;
+                    md += `- *(未暴露公共子属性)*\n`;
                 }
             });
 
@@ -633,11 +667,12 @@ window.__WVS__ = (function() {
             const ta = document.createElement("textarea");
             ta.value = document.getElementById('md-body').innerText; 
             document.body.appendChild(ta); ta.select(); document.execCommand("copy"); ta.remove();
-            alert("Markdown 报告已复制！");
+            alert("Markdown 报告复制成功！");
         }
     };
 })();
 
+// 给容器预留 400ms 的异步注入时间，保证捕获率
 setTimeout(window.__WVS__.init, 400);
 </script>
 </body>
