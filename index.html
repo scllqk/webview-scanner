@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>WebView Scanner</title>
 <style>
-    /* 现代极客风配色方案 */
     :root {
         --bg: #0d1117; --card: #161b22; --card-hover: #21262d; --border: #30363d;
         --text: #c9d1d9; --text-dim: #8b949e;
@@ -23,47 +22,27 @@
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 13px; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
 
-    /* ==========================================
-       ✨ 上下分层的完美 Header 布局
-       ========================================== */
     .header { 
         background: rgba(22, 27, 34, 0.85); 
         backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); 
         padding: calc(env(safe-area-inset-top) + 14px) 16px 12px; 
         border-bottom: 1px solid var(--border); 
         display: flex; 
-        flex-direction: column; /* 上下分层 */
-        gap: 12px; /* 两行间距 */
+        flex-direction: column; 
+        gap: 12px; 
         flex-shrink: 0; 
         z-index: 50;
     }
     [data-theme="light"] .header { background: rgba(255, 255, 255, 0.85); }
     
-    .header-top {
-        display: flex;
-        justify-content: center;
-        width: 100%;
-    }
-    .header-top h1 { 
-        font-size: 17px; 
-        color: var(--blue); 
-        font-weight: 700; 
-        letter-spacing: 0.5px; 
-        margin: 0; 
-        text-shadow: 0 0 10px rgba(88,166,255,0.2);
-    }
+    .header-top { display: flex; justify-content: center; width: 100%; }
+    .header-top h1 { font-size: 17px; color: var(--blue); font-weight: 700; letter-spacing: 0.5px; margin: 0; text-shadow: 0 0 10px rgba(88,166,255,0.2);}
 
-    .header-bottom {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-    }
+    .header-bottom { display: flex; justify-content: space-between; align-items: center; width: 100%; }
     .header-actions { display: flex; gap: 8px; align-items: center; }
     
     .bridge-badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; border: 1px solid rgba(88,166,255,0.3); background: rgba(88,166,255,0.1); color: var(--blue); white-space: nowrap;}
     
-    /* 现代化按钮控件 */
     .btn { padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); background: var(--card-hover); color: var(--text); cursor: pointer; transition: all 0.15s ease; display: inline-flex; align-items: center; justify-content: center; user-select: none; height: 30px;}
     .btn.icon-btn { padding: 0 10px; font-size: 14px; }
     .btn:active { transform: scale(0.94); opacity: 0.8;}
@@ -71,29 +50,27 @@
     .btn.danger { background: rgba(248, 81, 73, 0.1); border-color: var(--red); color: var(--red); }
     .btn.warn { background: rgba(210, 153, 34, 0.1); border-color: var(--yellow); color: var(--yellow); }
 
-    /* 输入框与表单 */
-    .input-base { width: 100%; padding: 10px 12px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; outline: none; transition: border-color 0.2s; font-size: 13px;}
+    /* 优化输入框和选择框，去除默认丑陋样式 */
+    .input-base { width: 100%; padding: 8px 12px; background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; outline: none; transition: border-color 0.2s; font-size: 13px; -webkit-appearance: none; appearance: none;}
     .input-base:focus { border-color: var(--blue); box-shadow: 0 0 0 2px rgba(88,166,255,0.2); }
+    select.input-base { background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%238b949e" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>'); background-repeat: no-repeat; background-position: right 10px center; background-size: 8px 10px; padding-right: 28px; cursor: pointer;}
     .control-row { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; width: 100%;}
 
-    /* 三栏工作区 (PC端) */
     .workspace { display: flex; flex: 1; overflow: hidden; position: relative; background: var(--bg);}
     .panel { display: none; flex-direction: column; background: var(--bg); width: 100%; height: 100%; overflow-y: auto;}
     .panel.active { display: flex; }
     .panel-title { background: var(--card); padding: 12px 16px; font-weight: bold; color: var(--text); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-size: 13px; position: sticky; top: 0; z-index: 10;}
     .panel-body { padding: 16px; display: flex; flex-direction: column; flex: 1; gap: 12px;}
 
-    /* 卡片化环境面板 */
     .env-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px; box-shadow: var(--shadow); }
     .env-label { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;}
     .env-val { font-family: ui-monospace, Consolas, monospace; font-size: 12px; color: var(--green); word-break: break-all; max-height: 120px; overflow-y: auto; line-height: 1.5;}
 
-    /* 对象列表 */
+    .search-box { width: 100%; padding: 10px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; outline: none; margin-bottom: 10px; font-family: monospace;}
     .obj-item { padding: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; border-left: 4px solid transparent; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; box-shadow: var(--shadow);}
     .obj-item.active { border-left-color: var(--blue); background: var(--card-hover); border-color: var(--blue);}
     .obj-name { font-family: ui-monospace, Consolas, monospace; font-weight: 600; font-size: 14px; word-break: break-all; color: var(--blue);}
     
-    /* 安全标签 */
     .tag { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; color: #fff; letter-spacing: 0.3px;}
     .t-crit { background: var(--red); color: #fff;} 
     .t-high { background: var(--orange); color: #fff;} 
@@ -103,7 +80,6 @@
     .t-native { background: rgba(188, 140, 255, 0.2); color: var(--purple); border: 1px solid var(--purple); font-size: 9px;}
     .t-js { background: rgba(139, 148, 158, 0.1); color: var(--text-dim); border: 1px solid var(--text-dim); font-size: 9px;}
 
-    /* 专业级树形结构 */
     .tree-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; flex-wrap: wrap; border-bottom: 1px solid rgba(139,148,158,0.15);}
     .tree-toggle { width: 18px; height: 18px; cursor: pointer; color: var(--text-dim); text-align: center; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; background: var(--card-hover);}
     .tree-key { font-family: ui-monospace, Consolas, monospace; cursor: pointer; font-weight: 600; color: var(--text); }
@@ -112,20 +88,15 @@
     .tree-children { margin-left: 20px; display: none; border-left: 1px solid var(--border); padding-left: 10px;}
     .tree-children.show { display: block; }
 
-    /* 黑客终端控制台 */
     .terminal { background: #000; border: 1px solid var(--border); border-radius: 8px; padding: 14px; flex: 1; overflow-y: auto; font-family: ui-monospace, "Fira Code", Consolas, monospace; font-size: 12px; margin-bottom: 10px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); min-height: 180px; scroll-behavior: smooth;}
     .log-line { margin-bottom: 6px; word-break: break-all; line-height: 1.5; display: flex; gap: 8px;}
     .c-time { color: #666; user-select: none; flex-shrink: 0;}
     .c-ok { color: #4af626; } .c-err { color: #ff3838; } .c-sys { color: #42a5f5; } .c-warn { color: #ffca28; } .c-hook { color: #e040fb; }
 
-    /* 报告弹窗 */
     .modal { display: none; position: fixed; inset: 0; background: rgba(13,17,23,0.85); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); z-index: 1000; padding: env(safe-area-inset-top) 15px env(safe-area-inset-bottom); flex-direction: column;}
     .modal-content { background: var(--bg); border: 1px solid var(--border); border-radius: 12px; flex: 1; display: flex; flex-direction: column; overflow: hidden; max-width: 800px; margin: 0 auto; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.8);}
     .modal-body { flex: 1; padding: 16px; overflow-y: auto; font-family: ui-monospace, Consolas, monospace; font-size: 12px; white-space: pre-wrap; -webkit-user-select: text; user-select: text; color: var(--text); line-height: 1.6;}
 
-    /* =========================================
-       📱 移动端沉浸式底部导航
-       ========================================= */
     .tabs { display: none; }
     @media (max-width: 900px) {
         .workspace { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
@@ -136,11 +107,8 @@
         .tab-icon { font-size: 18px; margin-bottom: 2px;}
         .panel { width: 100% !important; border-right: none; display: none; flex: none; height: 100%; }
         .panel.active { display: flex; }
-        
-        .bridge-badge { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
     }
 
-    /* PC 端多列平铺 */
     @media (min-width: 900px) {
         .workspace { flex-direction: row; flex-wrap: wrap;}
         .panel { display: flex !important; border-right: 1px solid var(--border); height: 100%; width: 25%; border-bottom: none;}
@@ -155,7 +123,7 @@
         <h1>🛡️ WebView Scanner</h1>
     </div>
     <div class="header-bottom">
-        <div class="bridge-badge" id="bridge-badge" title="当前环境架构">识别中...</div>
+        <div class="bridge-badge" id="bridge-badge" title="当前环境架构">探测中...</div>
         <div class="header-actions">
             <button class="btn icon-btn" onclick="toggleTheme()" title="切换明暗主题">🌓</button>
             <button class="btn primary" onclick="__WVS__.export()">📄 导出</button>
@@ -164,25 +132,17 @@
 </div>
 
 <div class="tabs" id="mobile-tabs">
-    <div class="tab active" onclick="switchTab(0)">
-        <span class="tab-icon">🌐</span><span>环境</span>
-    </div>
-    <div class="tab" onclick="switchTab(1)">
-        <span class="tab-icon">📦</span><span>对象池</span>
-    </div>
-    <div class="tab" onclick="switchTab(2)">
-        <span class="tab-icon">🌳</span><span>解析树</span>
-    </div>
-    <div class="tab" onclick="switchTab(3)">
-        <span class="tab-icon">📡</span><span>终端</span>
-    </div>
+    <div class="tab active" onclick="switchTab(0)"><span class="tab-icon">🌐</span><span>环境</span></div>
+    <div class="tab" onclick="switchTab(1)"><span class="tab-icon">📦</span><span>对象池</span></div>
+    <div class="tab" onclick="switchTab(2)"><span class="tab-icon">🌳</span><span>解析树</span></div>
+    <div class="tab" onclick="switchTab(3)"><span class="tab-icon">📡</span><span>终端</span></div>
 </div>
 
 <div class="workspace">
     <div class="panel active">
         <div class="panel-title">
             <span>🌐 信息收集与环境变量</span>
-            <button class="btn" style="height:26px; font-size: 11px;" onclick="location.reload()">强制重载</button>
+            <button class="btn" style="height:24px; padding: 0 8px; font-size: 11px;" onclick="location.reload()">强制重载</button>
         </div>
         <div class="panel-body">
             <div class="env-card"><div class="env-label">User-Agent</div><div class="env-val" style="color:var(--text);" id="env-ua"></div></div>
@@ -196,7 +156,7 @@
     <div class="panel">
         <div class="panel-title">
             <span>📦 注入对象池 (<span id="obj-count">0</span>)</span>
-            <button class="btn primary" style="height:26px; font-size: 11px;" onclick="__WVS__.scan()">🔄 扫描</button>
+            <button class="btn primary" style="height:24px; padding: 0 8px; font-size: 11px;" onclick="__WVS__.scan()">🔄 扫描</button>
         </div>
         <div class="panel-body" style="padding: 10px; display: flex; flex-direction: column; height: 100%;">
             <input type="text" class="search-box" id="search-input" placeholder="🔍 搜索过滤对象..." oninput="__WVS__.filter()">
@@ -207,13 +167,13 @@
                     <span>🔥</span> <span>字典盲测 (Brute Force)</span>
                 </div>
                 <div style="font-size:11px; color:var(--text-dim); margin-bottom:10px; line-height:1.4;">
-                    针对使用 <code>@JavascriptInterface</code> 等隐式绑定的原生对象，使用内置 InfoSec 字典安全探测未公开接口。
+                    针对隐式绑定的原生对象，使用 InfoSec 字典安全探测未公开接口。
                 </div>
                 <div class="control-row" style="margin-bottom:0;">
-                    <select id="brute-target" class="input-base" style="margin-bottom:0; flex: 1; font-weight:600; padding:8px; height:32px;"></select>
+                    <select id="brute-target" class="input-base" style="margin-bottom:0; flex: 1; height: 32px; padding: 0 8px; font-weight:600;"></select>
                     <button class="btn danger" style="height:32px;" id="btn-brute" onclick="__WVS__.brute()">探测</button>
                 </div>
-                <div id="brute-progress" style="margin-top: 8px; text-align: center; color: var(--blue); font-size: 12px; font-family:monospace; font-weight: bold; display:none;"></div>
+                <div id="brute-progress" style="margin-top: 8px; text-align: center; color: var(--blue); font-size: 11px; font-family:monospace; font-weight: bold; display:none;"></div>
             </div>
         </div>
     </div>
@@ -221,9 +181,9 @@
     <div class="panel">
         <div class="panel-title">
             <span id="tree-title">🌳 对象层级分析</span>
-            <div style="display:flex; gap:8px;">
-                <button class="btn" style="height:26px; font-size: 11px;" onclick="expandAll()">展开</button>
-                <button class="btn" style="height:26px; font-size: 11px;" onclick="collapseAll()">折叠</button>
+            <div style="display:flex; gap:6px;">
+                <button class="btn" style="height:24px; padding: 0 8px; font-size: 11px;" onclick="expandAll()">展开</button>
+                <button class="btn" style="height:24px; padding: 0 8px; font-size: 11px;" onclick="collapseAll()">折叠</button>
             </div>
         </div>
         <div class="panel-body" id="tree-body" style="padding: 8px 12px;">
@@ -237,7 +197,7 @@
     <div class="panel">
         <div class="panel-title">
             <span>📡 渗透调用终端</span>
-            <button class="btn danger" style="height:26px; font-size: 11px;" id="btn-hook" onclick="__WVS__.hook()">部署 AOP Hook</button>
+            <button class="btn danger" style="height:24px; padding: 0 8px; font-size: 11px;" id="btn-hook" onclick="__WVS__.hook()">部署 AOP Hook</button>
         </div>
         <div class="panel-body">
             <div class="terminal" id="term-box"></div>
@@ -260,7 +220,7 @@
                 
                 <div class="control-row" style="margin-bottom: 0;">
                     <button class="btn primary" style="flex: 1;" onclick="__WVS__.execute()">执行 Call</button>
-                    <button class="btn warn" style="flex: 1;" onclick="__WVS__.fuzz()" title="自动推测存活参数">Fuzz 连通测试</button>
+                    <button class="btn warn" style="flex: 1;" onclick="__WVS__.fuzz()" title="自动推测存活参数">Fuzz 探测</button>
                     <button class="btn" style="flex: 1;" onclick="__WVS__.deeplink()">URL Scheme</button>
                 </div>
             </div>
@@ -282,7 +242,6 @@
 </div>
 
 <script>
-// 移动端底部 Tab 切换
 function switchTab(index) {
     if(window.innerWidth > 900) return;
     document.querySelectorAll('.tab').forEach((t, i) => t.classList.toggle('active', i === index));
@@ -295,6 +254,13 @@ function toggleTheme() { const h = document.documentElement; h.setAttribute("dat
 window.__WVS__ = (function() {
     const INTERNAL_KEYS = ["switchTab", "expandAll", "collapseAll", "toggleTheme", "__WVS__"];
     const IGNORES = ["apply", "bind", "call", "toString", "length", "name", "prototype", "constructor", "caller", "callee"];
+    
+    // 【强力降噪名单】：过滤无用的常见前端探针、广告框架和统计代码
+    const NOISE_KEYS = [
+        "__cfBeacon", "webpackJsonp", "__VUE", "__REACT", "_ga", "_gat", "gtag", "dataLayer", 
+        "fbq", "ym", "ymq", "yandex", "clarity", "vConsole", "eruda", "fundebug", 
+        "BMap", "AMap", "qq", "wx", "QZAppExternal", "TencentCaptcha"
+    ];
     
     const KNOWLEDGE = [
         { kw: ["exec","eval","shell","system","command","nativeexec"], cat: "RCE / 命令执行", r: "t-crit", desc: "可导致底层系统命令或任意代码执行" },
@@ -331,6 +297,7 @@ window.__WVS__ = (function() {
     let bridgeFrameworkInfo = "Unknown";
     const termBox = document.getElementById('term-box');
 
+    // 【截断防御机制】防止 Wappalyzer 等巨型返回包刷毁终端
     function log(msg, type = 'c-sys') {
         const time = new Date().toLocaleTimeString().split(' ')[0];
         const line = document.createElement('div');
@@ -340,12 +307,28 @@ window.__WVS__ = (function() {
         termBox.scrollTop = termBox.scrollHeight;
     }
     
-    function safeStr(obj) { try { return typeof obj === 'object' && obj !== null ? JSON.stringify(obj) : String(obj); } catch(e) { return "[Object]"; } }
+    // 超长文本截断
+    function safeStr(obj, limit = 180) { 
+        try { 
+            let str = typeof obj === 'object' && obj !== null ? JSON.stringify(obj) : String(obj); 
+            if (str.length > limit) return str.substring(0, limit) + '... <span style="color:#888;">[超长截断]</span>';
+            return str;
+        } catch(e) { return "[Object]"; } 
+    }
     
-    function evalRisk(name) {
+    // 智能降低误报率：只有 function 才会被标记高危（字符串变量不构成 RCE 等风险）
+    function evalRisk(name, typeStr) {
         const s = name.toLowerCase();
-        for(let r of KNOWLEDGE) { if(r.kw.some(k => s.includes(k))) return r; }
-        return { cat: "未定级业务", r: "t-none", desc: "一般业务功能封装，无明显安全风险特征" };
+        for(let r of KNOWLEDGE) { 
+            if(r.kw.some(k => s.includes(k))) {
+                // 如果命中高危规则，但只是个字符串/数字，则降级为中危（可能是硬编码配置）
+                if (typeStr !== 'function' && typeStr !== 'object' && (r.r === 't-crit' || r.r === 't-high')) {
+                    return { cat: r.cat + " (静态配置)", r: "t-med", desc: "命中了敏感关键字，但由于是静态变量，危害降级。" };
+                }
+                return r;
+            }
+        }
+        return { cat: "业务逻辑 / 未定级", r: "t-none", desc: "一般业务功能封装，无明显安全风险特征" };
     }
 
     function resolvePath(pathStr) {
@@ -364,7 +347,7 @@ window.__WVS__ = (function() {
                 document.getElementById('env-cstore').innerText = cookies.length > 0 ? JSON.stringify(cookies) : "(空)";
             }).catch(e => document.getElementById('env-cstore').innerText = "读取失败 (受保护)");
         } else {
-            document.getElementById('env-cstore').innerText = "当前浏览器内核不支持 CookieStore API";
+            document.getElementById('env-cstore').innerText = "不支持 CookieStore API";
         }
 
         try { document.getElementById('env-ls').innerText = Object.keys(localStorage).join(", ") || "(空)"; } catch(e) { document.getElementById('env-ls').innerText = "跨域读取受限"; }
@@ -396,9 +379,9 @@ window.__WVS__ = (function() {
             const clean = Object.getOwnPropertyNames(iframe.contentWindow);
             const curr = Object.getOwnPropertyNames(window);
             iframe.remove();
-            keys = curr.filter(k => !clean.includes(k) && !k.startsWith("on") && !k.startsWith("_cb_") && !INTERNAL_KEYS.includes(k));
+            keys = curr.filter(k => !clean.includes(k) && !k.startsWith("on") && !k.startsWith("_cb_") && !INTERNAL_KEYS.includes(k) && !NOISE_KEYS.some(n => k.includes(n)));
         } catch(e) {
-            keys = Object.keys(window).filter(k => !["window","document","location","navigator","localStorage","sessionStorage","console"].includes(k) && !k.startsWith("_cb_") && !INTERNAL_KEYS.includes(k));
+            keys = Object.keys(window).filter(k => !["window","document","location","navigator","localStorage","sessionStorage","console"].includes(k) && !k.startsWith("_cb_") && !INTERNAL_KEYS.includes(k) && !NOISE_KEYS.some(n => k.includes(n)));
         }
 
         scanData = [];
@@ -406,11 +389,11 @@ window.__WVS__ = (function() {
 
         if (window.webkit && window.webkit.messageHandlers) {
             Object.keys(window.webkit.messageHandlers).forEach(h => {
-                const mInfo = evalRisk(h);
+                const mInfo = evalRisk(h, 'object');
                 scanData.push({ 
                     name: `webkit.messageHandlers.${h}`, objRef: window.webkit.messageHandlers[h], 
                     info: mInfo, maxRisk: mInfo.r,
-                    methods: [{ name: "postMessage", type: "function", info: evalRisk("postMessage"), isNative: true }]
+                    methods: [{ name: "postMessage", type: "function", info: evalRisk("postMessage", 'function'), isNative: true }]
                 });
                 tCount++;
             });
@@ -447,13 +430,13 @@ window.__WVS__ = (function() {
                                 if(mType === 'function' && obj[p].toString().includes('[native code]')) isNative = true;
                             } catch(e) { mType = 'unknown'; }
                             
-                            const mInfo = evalRisk(p);
+                            const mInfo = evalRisk(p, mType);
                             const levels = {"t-crit": 4, "t-high": 3, "t-med": 2, "t-none": 1};
                             if((levels[mInfo.r]||0) > (levels[maxR]||0)) maxR = mInfo.r;
                             methods.push({ name: p, type: mType, info: mInfo, isNative: isNative });
                         });
                     } catch(e) {}
-                    scanData.push({ name: key, objRef: obj, info: evalRisk(key), maxRisk: maxR, methods: methods });
+                    scanData.push({ name: key, objRef: obj, info: evalRisk(key, typeof obj), maxRisk: maxR, methods: methods });
                     tCount++;
                 }
             }
@@ -471,7 +454,7 @@ window.__WVS__ = (function() {
                 document.getElementById('obj-count').innerText = tCount;
                 renderList();
                 updateBruteSelect();
-                log(`沙箱快照比对完成，共捕获未授权原生对象 ${tCount} 个。`, 'c-ok');
+                log(`沙箱快照比对完成，共过滤出原生对象 ${tCount} 个。`, 'c-ok');
             }
         }
         processBatch();
@@ -522,7 +505,7 @@ window.__WVS__ = (function() {
         let toggleHTML = isParent ? `<span class="tree-toggle" onclick="this.parentElement.nextElementSibling.classList.toggle('show'); this.innerText = this.innerText==='▶'?'▼':'▶'">▶</span>` : `<span style="width:18px;"></span>`;
         
         const name = path.split('.').pop();
-        const rInfo = evalRisk(name);
+        const rInfo = evalRisk(name, typeStr);
         const tagHTML = rInfo.r !== 't-none' ? `<span class="tag ${rInfo.r}">${rInfo.cat}</span>` : '';
         
         let nativeTag = "";
@@ -535,7 +518,7 @@ window.__WVS__ = (function() {
         }
 
         let valHTML = "";
-        if(!isParent) valHTML = `<span class="tree-val"> = ${safeStr(obj)}</span>`;
+        if(!isParent) valHTML = `<span class="tree-val"> = ${safeStr(obj, 100)}</span>`; // 树形结构里更严格的截断
         
         let actionHTML = (typeStr === 'function' || path.includes("messageHandlers")) ? 
             `<button class="btn" style="padding:4px 8px; margin-left:auto; font-size:11px;" onclick="__WVS__.loadPath('${path}')">转到终端</button>` : '';
@@ -714,13 +697,13 @@ window.__WVS__ = (function() {
                         found++;
                         let isNat = false;
                         try { if(typeof targetObj[mName]==='function' && targetObj[mName].toString().includes('[native code]')) isNat=true; } catch(e){}
-                        scanItem.methods.push({ name: mName, type: "function", info: evalRisk(mName), isNative: isNat });
+                        scanItem.methods.push({ name: mName, type: "function", info: evalRisk(mName, "function"), isNative: isNat });
                         log(`🎯 [精准命中] 嗅探到可疑方法: .${mName}()`, 'c-hook');
                     }
                 } catch(e) {
                     if(!scanItem.methods.some(m => m.name === mName)) {
                         found++;
-                        scanItem.methods.push({ name: mName, type: "function", info: evalRisk(mName) });
+                        scanItem.methods.push({ name: mName, type: "function", info: evalRisk(mName, "function") });
                         log(`🎯 [越权回显] 依靠容器拦截机制证实方法存在: .${mName}()`, 'c-err');
                     }
                 }
